@@ -1,0 +1,9 @@
+.env
+config/config.yaml
+config/.house-tv-state.json
+config/themes/
+music/*
+!music/.gitkeep
+__pycache__/
+*.pyc
+.pytest_cache/

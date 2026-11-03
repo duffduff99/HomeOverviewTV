@@ -1,0 +1,12 @@
+{
+  "name": "Holiday",
+  "particles": "sparkles",
+  "dim": 0.15,
+  "background": "radial-gradient(1100px 700px at 0% 0%, #7f1d1d 0%, transparent 60%), radial-gradient(1000px 800px at 100% 100%, #14532d 0%, transparent 60%), linear-gradient(160deg, #1d0f12 0%, #0a120d 100%)",
+  "colors": {
+    "accent": "#f4c95d",
+    "accent-ink": "#271a00",
+    "panel": "rgba(24, 14, 16, 0.55)",
+    "panel-solid": "#20151a"
+  }
+}

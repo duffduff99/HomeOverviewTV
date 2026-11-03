@@ -1,0 +1,10 @@
+.git
+.github
+.env
+config/config.yaml
+config/.house-tv-state.json
+music
+tests
+kiosk
+docs
+**/__pycache__

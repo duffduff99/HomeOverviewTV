@@ -1,0 +1,10 @@
+{
+  "name": "Night Sky",
+  "particles": "none",
+  "dim": 0.15,
+  "background": "radial-gradient(1100px 650px at 12% 0%, #1f4475 0%, transparent 62%), radial-gradient(900px 700px at 100% 100%, #2b2056 0%, transparent 62%), linear-gradient(160deg, #0b1527 0%, #060a13 100%)",
+  "colors": {
+    "accent": "#7cc4ff",
+    "accent-ink": "#06121f"
+  }
+}

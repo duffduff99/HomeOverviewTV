@@ -1,0 +1,12 @@
+{
+  "name": "Winter",
+  "particles": "snow",
+  "dim": 0.18,
+  "background": "radial-gradient(1200px 700px at 20% 0%, #2c5d86 0%, transparent 62%), radial-gradient(900px 700px at 100% 100%, #1d3557 0%, transparent 60%), linear-gradient(170deg, #12243a 0%, #08111d 100%)",
+  "colors": {
+    "accent": "#a5dcff",
+    "accent-ink": "#06182a",
+    "panel": "rgba(12, 24, 40, 0.55)",
+    "panel-solid": "#122236"
+  }
+}

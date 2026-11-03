@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>House TV</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/vendor/hls.light.min.js" defer></script>
+  <script type="module" src="/static/js/app.js"></script>
+</head>
+<body>
+  <div id="stage">
+    <div id="bg"></div>
+    <canvas id="particles" width="1920" height="1080"></canvas>
+    <div id="frame">
+      <header id="header">
+        <div class="brand">
+          <div class="brand-mark"><svg viewBox="0 0 24 24"><path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/></svg></div>
+          <div>
+            <div id="brand-name" class="brand-name"></div>
+            <div id="brand-sub" class="brand-sub"></div>
+          </div>
+        </div>
+        <nav id="pills"></nav>
+        <div class="hdr-right">
+          <div id="hdr-weather" class="hdr-weather" hidden>
+            <span id="hdr-weather-icon" class="icon"><svg viewBox="0 0 24 24"><path d=""/></svg></span>
+            <span id="hdr-temp"></span>
+          </div>
+          <div class="clock">
+            <div class="clock-line"><span id="clock-time"></span><span id="clock-period"></span></div>
+            <div id="clock-date"></div>
+          </div>
+        </div>
+      </header>
+
+      <main id="screens"></main>
+
+      <div id="interrupt" hidden></div>
+
+      <div id="alert" hidden>
+        <div class="alert-tag"><svg viewBox="0 0 24 24"><path d="M13 14H11V9H13M13 18H11V16H13M1 21H23L12 2L1 21Z"/></svg>Alert</div>
+        <div class="alert-window"><div id="alert-track"></div></div>
+      </div>
+
+      <footer id="lower">
+        <div id="ticker-tag" class="ticker-tag">
+          <span id="ticker-tag-icon" class="icon"><svg viewBox="0 0 24 24"><path d=""/></svg></span>
+          <span id="ticker-tag-label"></span>
+        </div>
+        <div id="ticker-item" class="ticker-item"></div>
+        <div id="bgm" class="bgm" hidden>
+          <svg viewBox="0 0 24 24"><path d="M12 3V13.55C11.41 13.21 10.73 13 10 13C7.79 13 6 14.79 6 17S7.79 21 10 21 14 19.21 14 17V7H18V3H12Z"/></svg>
+          <span id="bgm-title"></span>
+        </div>
+      </footer>
+    </div>
+    <div id="conn" class="conn" hidden></div>
+  </div>
+</body>
+</html>
