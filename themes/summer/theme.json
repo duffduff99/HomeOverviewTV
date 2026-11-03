@@ -1,0 +1,12 @@
+{
+  "name": "Summer Evening",
+  "particles": "fireflies",
+  "dim": 0.15,
+  "background": "radial-gradient(1200px 650px at 50% 0%, #c2410c 0%, transparent 55%), radial-gradient(1000px 700px at 0% 100%, #134e4a 0%, transparent 60%), linear-gradient(180deg, #3b1d2e 0%, #0d1220 100%)",
+  "colors": {
+    "accent": "#fbbf5a",
+    "accent-ink": "#2a1700",
+    "panel": "rgba(20, 16, 30, 0.55)",
+    "panel-solid": "#1c1726"
+  }
+}

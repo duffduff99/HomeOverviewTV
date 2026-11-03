@@ -1,0 +1,209 @@
+# ---------------------------------------------------------------------------
+# House TV configuration
+#
+# Copy this file to config.yaml and replace the entity ids with your own.
+# Changes are picked up automatically within a few seconds - no restart needed.
+#
+# Tip: list your entity ids with
+#   docker compose run --rm house-tv entities solar
+#
+# The entity ids below match the built-in demo (--demo) so you can try this
+# file as-is before connecting it to Home Assistant.
+# ---------------------------------------------------------------------------
+
+name: Our House
+subtitle: House Channel
+
+# Home Assistant connection. Best set via HA_URL / HA_TOKEN in the .env file.
+homeassistant:
+  url: ${HA_URL}
+  token: ${HA_TOKEN}
+
+display:
+  safe_area: 3            # % margin on each edge, for TVs that crop the picture
+  effects: true           # seasonal particles + blurred glass panels (turn off on slow hardware)
+  transition_seconds: 1   # crossfade between screens
+  time_format: 12h        # 12h or 24h
+  locale: en-US
+
+rotation:
+  default_duration: 15    # seconds per screen unless the screen sets its own
+
+# Themes: night, autumn, winter, spring, summer, holiday (or your own - see README).
+# The first schedule entry whose dates include today wins; otherwise `default`.
+# Home Assistant can override this with the "Theme" select entity.
+theme:
+  default: night
+  schedule:
+    - { theme: autumn,  from: "09-22", to: "11-24" }
+    - { theme: holiday, from: "11-25", to: "12-31" }
+    - { theme: winter,  from: "01-01", to: "03-19" }
+    - { theme: spring,  from: "03-20", to: "06-20" }
+    - { theme: summer,  from: "06-21", to: "09-21" }
+
+# Always-visible top bar
+header:
+  weather: weather.home
+  temperature: sensor.outdoor_temperature
+
+# ---------------------------------------------------------------------------
+# Screens rotate in this order. Every screen accepts:
+#   title, duration (seconds), enabled (true/false), show_when (conditions)
+#   tiles: extra values to show ({entity, name, icon, unit, digits, attribute})
+# ---------------------------------------------------------------------------
+screens:
+  - type: weather
+    title: Outside
+    duration: 20
+    weather: weather.home                 # forecast + condition
+    temperature: sensor.outdoor_temperature
+    humidity: sensor.outdoor_humidity
+    air_quality: sensor.outdoor_pm25      # AQI number, or a PM2.5 sensor in µg/m³ (converted to AQI)
+    wind: sensor.wind_speed               # optional; falls back to the weather entity
+    forecast: daily                       # daily or hourly
+    forecast_count: 5
+    # Air quality gauges (up to 4), coloured by health level with the level
+    # name written underneath. kind: pm25, pm10, pm1, pm03, voc, nox, co2, other
+    air_gauges:
+      - { entity: sensor.outdoor_pm25, kind: pm25 }
+      - { entity: sensor.outdoor_voc, kind: voc }
+    # Optional extra values (shown in a small grid):
+    # tiles:
+    #   - { entity: sensor.rain_today, name: Rain today, icon: rain }
+
+  - type: energy
+    title: Energy
+    duration: 25
+    # Today's totals and the hourly chart come straight from your
+    # Home Assistant Energy dashboard - nothing to set up here.
+    use_energy_dashboard: true
+    # Live power flow (instantaneous W or kW sensors):
+    power:
+      solar: sensor.pv_power
+      battery: sensor.battery_power       # positive = discharging into the house
+      battery_invert: false               # set true if your sensor is positive while charging
+      battery_soc: sensor.battery_soc
+      grid: sensor.grid_power             # positive = importing from the grid
+      grid_invert: false                  # set true if your sensor is positive while exporting
+      home: sensor.home_power             # optional; calculated if left out
+    tiles:                                # e.g. one per MPPT / string
+      - { entity: sensor.pv1_power, name: String 1, icon: panel }
+      - { entity: sensor.pv2_power, name: String 2, icon: panel }
+      - { entity: sensor.pv3_power, name: String 3, icon: panel }
+
+  - type: cameras
+    title: Cameras
+    duration: 30
+    mode: live              # live (HLS video via Home Assistant) or snapshot (refreshing stills)
+    snapshot_interval: 3    # seconds, for snapshot mode / fallback
+    cameras:                # up to 4. Tip: use your cameras' sub-streams.
+      - { entity: camera.camera_1, name: Front Yard }
+      - { entity: camera.camera_2, name: Driveway }
+      - { entity: camera.camera_3, name: Back Yard }
+      - { entity: camera.camera_4, name: Side Gate }
+
+  - type: calendar
+    title: Coming Up
+    enabled: false          # flip to true when you start using a calendar
+    duration: 15
+    days: 7
+    calendars:
+      - { entity: calendar.family, name: Family }
+
+  - type: tiles
+    title: Around the House
+    duration: 15
+    tiles:
+      - { entity: sensor.next_trash_day, name: Trash pickup, icon: trash }
+      - { entity: sensor.garage_door, name: Garage, icon: door }
+      - { entity: sensor.ev_charge, name: Car battery, icon: car }
+      - { entity: sensor.indoor_temperature, name: Inside, icon: thermometer }
+
+  # A dedicated air quality screen (up to 6 gauges), if you want more detail
+  # than the Outside screen shows:
+  # - type: air
+  #   title: Air Quality
+  #   pm25: sensor.outdoor_pm25           # drives the big AQI number
+  #   gauges:
+  #     - { entity: sensor.outdoor_pm25, kind: pm25 }
+  #     - { entity: sensor.outdoor_pm10, kind: pm10 }
+  #     - { entity: sensor.outdoor_voc,  kind: voc }
+  #     - { entity: sensor.outdoor_nox,  kind: nox }
+  #     - { entity: sensor.outdoor_co2,  kind: co2 }
+  #   tiles:
+  #     - { entity: sensor.outdoor_pm03, name: PM0.3 }
+
+  # Example of a conditional screen: only show solar strings while the sun is up.
+  # - type: tiles
+  #   title: Solar strings
+  #   show_when:
+  #     - { entity: sun.sun, state: above_horizon }
+  #   tiles: [sensor.pv1_power, sensor.pv2_power, sensor.pv3_power]
+
+# Bottom bar: what's playing on these media players (only shown while playing)
+now_playing:
+  media_players:
+    - { entity: media_player.house_fm, name: House FM }
+    - { entity: media_player.kitchen, name: Kitchen }
+
+# Message board: any text entity (e.g. an input_text helper). Also settable
+# from the "Message" text entity this channel adds to Home Assistant.
+message:
+  entity: input_text.tv_message
+
+# Alerts: a scrolling banner while any of these are active.
+#   text: fixed text, or attribute: read the text from an attribute
+#   when: conditions (default: entity is on / non-zero)
+#   level: warning or critical
+alerts:
+  - entity: binary_sensor.weather_alert
+    attribute: title
+    level: warning
+
+# Pop-ups: show a camera full-screen when something happens, then go back to
+# the rotation. Music is turned down while it's up.
+#   to: the state that triggers it (default "on"), or "changed" for event
+#       entities (e.g. event.front_doorbell) whose state is a new timestamp on every press
+#   when: optional extra conditions, e.g. only after dark
+interrupts:
+  - entity: binary_sensor.front_door_motion
+    to: "on"
+    camera: camera.camera_1
+    title: Someone's at the front door
+    duration: 30
+  # - entity: event.front_doorbell
+  #   to: changed
+  #   camera: camera.camera_1
+  #   title: Doorbell
+  #   duration: 45
+  #   when:
+  #     - { entity: sun.sun, state: below_horizon }
+
+# Background music: every audio file in the music folder, on a loop.
+music:
+  enabled: true
+  volume: 35          # 0-100
+  duck_volume: 10     # volume while a camera interrupt is on screen
+  shuffle: true
+
+# MQTT: adds a "House TV" device to Home Assistant with controls for theme,
+# screen, music, volume, message and screen time.
+mqtt:
+  enabled: true
+  host: ${MQTT_HOST}
+  port: 1883
+  username: ${MQTT_USERNAME}
+  password: ${MQTT_PASSWORD}
+  discovery_prefix: homeassistant
+  topic: house_tv
+
+# ---------------------------------------------------------------------------
+# Conditions (used by show_when, alerts.when):
+#   { entity: sun.sun, state: above_horizon }
+#   { entity: sensor.x, state: [a, b] }        any of these states
+#   { entity: sensor.x, not_state: off }
+#   { entity: sensor.solar_power, above: 100 }
+#   { entity: sensor.x, below: 10 }
+#   { entity: binary_sensor.motion, changed_within: 300 }   seconds
+#   add `attribute: name` to test an attribute instead of the state
+# ---------------------------------------------------------------------------

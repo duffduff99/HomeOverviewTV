@@ -1,0 +1,12 @@
+{
+  "name": "Spring",
+  "particles": "petals",
+  "dim": 0.18,
+  "background": "radial-gradient(1100px 700px at 10% 0%, #1f6b52 0%, transparent 60%), radial-gradient(1000px 750px at 100% 100%, #6b2a52 0%, transparent 60%), linear-gradient(160deg, #10261f 0%, #0b1210 100%)",
+  "colors": {
+    "accent": "#7ee0b5",
+    "accent-ink": "#05231a",
+    "panel": "rgba(12, 28, 24, 0.55)",
+    "panel-solid": "#12241f"
+  }
+}

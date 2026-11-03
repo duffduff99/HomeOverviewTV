@@ -1,0 +1,12 @@
+{
+  "name": "Autumn",
+  "particles": "leaves",
+  "dim": 0.2,
+  "background": "radial-gradient(1200px 700px at 0% 0%, #7a3412 0%, transparent 60%), radial-gradient(1000px 800px at 100% 100%, #4a1d0c 0%, transparent 60%), linear-gradient(160deg, #2a140b 0%, #120905 100%)",
+  "colors": {
+    "accent": "#f59e5b",
+    "accent-ink": "#2a1204",
+    "panel": "rgba(30, 16, 10, 0.55)",
+    "panel-solid": "#24150e"
+  }
+}

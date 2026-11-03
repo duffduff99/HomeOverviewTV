@@ -1,0 +1,13 @@
+services:
+  house-tv:
+    image: ghcr.io/duffduff99/homeoverviewtv:latest
+    # To build from source instead of pulling the published image:
+    # build: .
+    container_name: house-tv
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/config   # config.yaml, your own themes in config/themes/
+      - ./music:/music     # drop MP3s here; they're picked up within a minute
