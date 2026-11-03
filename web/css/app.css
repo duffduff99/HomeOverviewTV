@@ -195,6 +195,17 @@ body.has-alert #interrupt { bottom: calc(var(--safe-y) + var(--lower-h) + var(--
   background: #1b2236; transform: translateX(var(--moon-off, 0px));
 }
 .weather-tiles { flex: 1.25; padding: 26px; }
+.weather-air { flex: 1.35; padding: 26px 30px 24px; display: flex; flex-direction: column; min-width: 0; }
+.weather-air-grid { flex: 1; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 16px; margin-top: 14px; }
+.weather-air.n3 .weather-air-grid, .weather-air.n4 .weather-air-grid { grid-auto-flow: row; grid-template-columns: 1fr 1fr; }
+.weather-air .gauge { padding: 10px 12px 16px; }
+.weather-air .g-svg { width: 210px; }
+.weather-air .g-value { font-size: 44px; }
+.weather-air .g-readout { margin-top: -40px; }
+.weather-air .g-name { font-size: 20px; margin-top: 10px; }
+.weather-air.n3 .g-svg, .weather-air.n4 .g-svg { width: 130px; }
+.weather-air.n3 .g-value, .weather-air.n4 .g-value { font-size: 30px; }
+.weather-air.n3 .g-readout, .weather-air.n4 .g-readout { margin-top: -26px; }
 
 /* ---------------------------------------------------------------- tiles */
 .tile-grid { display: grid; gap: 18px; grid-template-columns: repeat(min(var(--count), 4), minmax(0, 1fr)); }

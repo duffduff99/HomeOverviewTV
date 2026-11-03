@@ -1,6 +1,7 @@
 import { h, icon, setIcon, weatherIcon, weatherLabel, num, isNum, aqiInfo, moonPhase,
   fmtTime, fmtDate } from "../util.js";
 import { tileGrid } from "./tiles.js";
+import { gauge } from "./air.js";
 
 export function create(cfg, ctx) {
   const ref = {};
@@ -25,6 +26,7 @@ export function create(cfg, ctx) {
   ref.aqiMarker = h("span.aqi-marker");
   ref.aqiBar.append(ref.aqiMarker);
   const tiles = tileGrid(cfg.tiles || [], "tiles-compact");
+  const gauges = (cfg.air_gauges || []).map(gauge);
 
   const el = h("section.screen.screen-weather",
     h("div.panel.hero",
@@ -45,6 +47,8 @@ export function create(cfg, ctx) {
           h("div.sm-item", icon("sunset", "sm-icon"), h("div", h("span.metric-label", "Sunset"), ref.sunset)),
           h("div.sm-item", ref.moonIcon, h("div", h("span.metric-label", "Moon"), ref.moonName, ref.moonSub)),
         ),
+        gauges.length ? h(`div.panel.weather-air.n${gauges.length}`,
+          h("div.panel-title", "Air quality"), h("div.weather-air-grid", gauges.map((g) => g.el))) : null,
         (cfg.tiles || []).length ? h("div.panel.weather-tiles", tiles.el) : null,
       ),
     ),
@@ -112,6 +116,7 @@ export function create(cfg, ctx) {
       }));
     }
     tiles.update(c);
+    gauges.forEach((g) => g.update(c));
   }
 
   return { el, update };

@@ -4,10 +4,11 @@ A "house channel" for your TVs, like the ship channel on a cruise. A Raspberry
 Pi plugs into HDMI (or a QAM modulator) and rotates through screens of live
 Home Assistant data:
 
-- **Outside:** current conditions, forecast, AQI, sunrise/sunset, moon phase
+- **Outside:** current conditions, forecast, sunrise/sunset, moon phase, and air quality gauges
+  (e.g. PM2.5 and VOC from a local monitor)
 - **Energy:** live solar / battery / grid / home power flow, plus today's totals and hourly
   chart read straight from your **Home Assistant Energy dashboard**
-- **Air quality:** gauges for PM2.5 / PM10 / PM1 / PM0.3 / VOC / NOx / CO₂ from a local monitor
+- **Air quality** (optional, more detail): up to six gauges for PM2.5 / PM10 / PM1 / PM0.3 / VOC / NOx / CO₂
 - **Cameras:** up to four live feeds
 - **Calendar** (optional) and a free-form **tiles** screen for anything else
 
@@ -122,7 +123,7 @@ highlights:
 - **Energy:** today's kWh totals and the hourly chart come from the Energy dashboard
   automatically. For the live flow diagram, list your instantaneous power sensors under `power:`.
   Use `battery_invert` / `grid_invert` if your sensors use the opposite sign convention.
-- **Air quality:** a `type: air` screen with up to 6 gauges. `kind:` (pm25, pm10, pm1, pm03, voc,
+- **Air quality:** `air_gauges:` on the Outside screen (up to 4), or a separate `type: air` screen with up to 6 gauges. `kind:` (pm25, pm10, pm1, pm03, voc,
   nox, co2) picks the scale and health bands, and the band name is printed under each gauge.
 - **Cameras:** for best results, point at your cameras' **sub-streams**. With the Generic Camera
   integration, add a second camera entity in HA whose stream URL is the sub-stream.
@@ -182,8 +183,14 @@ automation:
           value: "Dinner in 15 minutes!"
 ```
 
-(For simple cases, the `interrupts:` section in `config.yaml` does the doorbell pop-up without an
-automation.)
+For simple cases, the `interrupts:` section in `config.yaml` does the doorbell pop-up without an
+automation. It fires when the entity *changes to* the `to:` state (default `on`). Use
+`to: changed` for event entities such as `event.front_doorbell`, which get a new timestamp on every
+press. Publishing `{"camera": "none"}` to `house_tv/show_camera` dismisses a pop-up early.
+
+**Alerts** (`alerts:` in `config.yaml`) show a scrolling banner for as long as the entity is active
+(on, a non-zero number, or any text other than off/unknown/unavailable), and disappear when it
+isn't. The text comes from `text:`, an attribute (`attribute:`), or the entity's name.
 
 ## Troubleshooting
 

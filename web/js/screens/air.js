@@ -18,7 +18,7 @@ const KINDS = {
 const R = 88, CX = 110, CY = 104, LEN = Math.PI * R;
 const arc = `M${CX - R},${CY} A${R},${R} 0 0 1 ${CX + R},${CY}`;
 
-function gauge(g) {
+export function gauge(g) {
   const kind = KINDS[g.kind] || KINDS.other;
   const ref = {
     value: h("span.g-value"), unit: h("span.g-unit"), level: h("div.g-level"),

@@ -58,15 +58,18 @@ screens:
     weather: weather.home                 # forecast + condition
     temperature: sensor.outdoor_temperature
     humidity: sensor.outdoor_humidity
-    air_quality: sensor.outdoor_aqi       # AQI number, or a PM2.5 sensor in µg/m³
+    air_quality: sensor.outdoor_pm25      # AQI number, or a PM2.5 sensor in µg/m³ (converted to AQI)
     wind: sensor.wind_speed               # optional; falls back to the weather entity
     forecast: daily                       # daily or hourly
     forecast_count: 5
-    tiles:
-      - { entity: sensor.rain_today, name: Rain today, icon: rain }
-      - { entity: sensor.uv_index, name: UV index, icon: uv }
-      - { entity: sensor.indoor_temperature, name: Inside, icon: thermometer }
-      - { entity: sensor.wind_speed, name: Wind, icon: windy }
+    # Air quality gauges (up to 4), coloured by health level with the level
+    # name written underneath. kind: pm25, pm10, pm1, pm03, voc, nox, co2, other
+    air_gauges:
+      - { entity: sensor.outdoor_pm25, kind: pm25 }
+      - { entity: sensor.outdoor_voc, kind: voc }
+    # Optional extra values (shown in a small grid):
+    # tiles:
+    #   - { entity: sensor.rain_today, name: Rain today, icon: rain }
 
   - type: energy
     title: Energy
@@ -87,25 +90,6 @@ screens:
       - { entity: sensor.pv1_power, name: String 1, icon: panel }
       - { entity: sensor.pv2_power, name: String 2, icon: panel }
       - { entity: sensor.pv3_power, name: String 3, icon: panel }
-
-  # Local air quality monitor (e.g. AirGradient). Up to 6 gauges, coloured by
-  # health band with the band name written underneath.
-  # kind: pm25, pm10, pm1, pm03, voc, nox, co2 or other (other: set min/max yourself)
-  - type: air
-    title: Air Quality
-    duration: 15
-    pm25: sensor.outdoor_pm25             # drives the big AQI number
-    gauges:
-      - { entity: sensor.outdoor_pm25, kind: pm25 }
-      - { entity: sensor.outdoor_pm10, kind: pm10 }
-      - { entity: sensor.outdoor_pm1,  kind: pm1 }
-      - { entity: sensor.outdoor_voc,  kind: voc }
-      - { entity: sensor.outdoor_nox,  kind: nox }
-      - { entity: sensor.outdoor_co2,  kind: co2 }
-    tiles:                                # small readings under the AQI
-      - { entity: sensor.outdoor_pm03, name: PM0.3 }
-      - { entity: sensor.outdoor_temperature, name: Temperature }
-      - { entity: sensor.outdoor_humidity, name: Humidity }
 
   - type: cameras
     title: Cameras
@@ -135,6 +119,20 @@ screens:
       - { entity: sensor.ev_charge, name: Car battery, icon: car }
       - { entity: sensor.indoor_temperature, name: Inside, icon: thermometer }
 
+  # A dedicated air quality screen (up to 6 gauges), if you want more detail
+  # than the Outside screen shows:
+  # - type: air
+  #   title: Air Quality
+  #   pm25: sensor.outdoor_pm25           # drives the big AQI number
+  #   gauges:
+  #     - { entity: sensor.outdoor_pm25, kind: pm25 }
+  #     - { entity: sensor.outdoor_pm10, kind: pm10 }
+  #     - { entity: sensor.outdoor_voc,  kind: voc }
+  #     - { entity: sensor.outdoor_nox,  kind: nox }
+  #     - { entity: sensor.outdoor_co2,  kind: co2 }
+  #   tiles:
+  #     - { entity: sensor.outdoor_pm03, name: PM0.3 }
+
   # Example of a conditional screen: only show solar strings while the sun is up.
   # - type: tiles
   #   title: Solar strings
@@ -162,13 +160,24 @@ alerts:
     attribute: title
     level: warning
 
-# Interrupts: jump to a camera full-screen when something happens.
+# Pop-ups: show a camera full-screen when something happens, then go back to
+# the rotation. Music is turned down while it's up.
+#   to: the state that triggers it (default "on"), or "changed" for event
+#       entities (e.g. event.front_doorbell) whose state is a new timestamp on every press
+#   when: optional extra conditions, e.g. only after dark
 interrupts:
   - entity: binary_sensor.front_door_motion
     to: "on"
     camera: camera.camera_1
     title: Someone's at the front door
     duration: 30
+  # - entity: event.front_doorbell
+  #   to: changed
+  #   camera: camera.camera_1
+  #   title: Doorbell
+  #   duration: 45
+  #   when:
+  #     - { entity: sun.sun, state: below_horizon }
 
 # Background music: every audio file in the music folder, on a loop.
 music:

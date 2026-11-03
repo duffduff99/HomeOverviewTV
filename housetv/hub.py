@@ -276,9 +276,23 @@ class Hub:
         for item in self.cfg["interrupts"]:
             if item["entity"] != entity_id:
                 continue
-            target = str(item.get("to", "on"))
-            if new.get("state") == target and (old or {}).get("state") != target:
+            if self._interrupt_fires(item, new, old):
                 self.show_camera(item.get("camera"), item.get("title"), item.get("duration", 30))
+
+    def _interrupt_fires(self, item: dict, new: dict, old: dict | None) -> bool:
+        new_state = new.get("state")
+        old_state = (old or {}).get("state")
+        target = str(item.get("to", "on"))
+        if target == "changed":
+            # Event entities (e.g. event.front_doorbell) change their state to a new
+            # timestamp on every press. Ignore the jump back from unavailable after
+            # a Home Assistant restart.
+            if old_state in (None, "unknown", "unavailable") or new_state in ("unknown", "unavailable"):
+                return False
+            fired = new_state != old_state
+        else:
+            fired = new_state == target and old_state != target
+        return fired and conditions.check_all(item.get("when"), self.states)
 
     def show_camera(self, camera: str | None, title: str | None = None, duration: float = 30) -> None:
         duration = max(5, min(600, float(duration or 30)))

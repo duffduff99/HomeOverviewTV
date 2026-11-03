@@ -136,6 +136,8 @@ def normalise(raw: dict) -> dict:
         s["show_when"] = as_list(s.get("show_when"))
         if stype == "cameras":
             s["cameras"] = normalise_entity_list(s.get("cameras"))[:4]
+        if stype == "weather":
+            s["air_gauges"] = normalise_entity_list(s.get("air_gauges"))[:4]
         if stype == "air":
             s["gauges"] = normalise_entity_list(s.get("gauges"))[:6]
         if stype == "calendar":
@@ -182,7 +184,7 @@ def watched_entities(cfg: dict) -> set[str]:
             if isinstance(cond, dict):
                 add(cond.get("entity"))
     for s in cfg["screens"]:
-        for t in s["tiles"] + s.get("gauges", []):
+        for t in s["tiles"] + s.get("gauges", []) + s.get("air_gauges", []):
             add(t["entity"])
         for cond in s["show_when"]:
             if isinstance(cond, dict):

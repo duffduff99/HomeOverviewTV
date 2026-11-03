@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 from housetv import conditions
 from housetv.config import load, normalise, watched_entities
+from housetv.hub import Hub
 from housetv.energy import stats_from_prefs, summarise
 from housetv.themes import scheduled_theme
 
@@ -14,7 +15,8 @@ def test_example_config_loads():
     cfg = load(ROOT / "config" / "config.example.yaml")
     types = [s["type"] for s in cfg["screens"]]
     assert "calendar" not in types  # disabled in the example
-    assert types[:3] == ["weather", "energy", "air"]
+    assert types[:3] == ["weather", "energy", "cameras"]
+    assert [g["kind"] for g in cfg["screens"][0]["air_gauges"]] == ["pm25", "voc"]
     ids = watched_entities(cfg)
     assert "sensor.pv_power" in ids and "sensor.outdoor_voc" in ids and "sun.sun" in ids
 
@@ -84,3 +86,18 @@ def test_energy_prefs_and_summary():
     assert out["hourly"]["home"][12] == 2.0      # 5 solar - 2 export - 1 charge
     assert out["totals"]["home"] == round(1.0 + 2.0 + 0.4 + 0.5, 2)
     assert out["totals"]["self_powered"] == round(100 * (1 - 1.0 / 3.9))
+
+
+def test_interrupt_triggers():
+    fake = type("H", (), {"states": {"sun.sun": {"state": "below_horizon", "attributes": {}}}})()
+    fires = lambda item, new, old: Hub._interrupt_fires(fake, item, {"state": new}, old and {"state": old})  # noqa: E731
+    on = {"entity": "binary_sensor.bell"}
+    assert fires(on, "on", "off")
+    assert not fires(on, "on", "on")          # no repeat while it stays on
+    assert not fires(on, "off", "on")
+    ev = {"entity": "event.bell", "to": "changed"}
+    assert fires(ev, "2026-11-03T10:00:01", "2026-11-03T09:00:00")
+    assert not fires(ev, "2026-11-03T10:00:01", "unavailable")   # HA restart
+    assert not fires(ev, "2026-11-03T10:00:01", None)
+    night_only = {**on, "when": [{"entity": "sun.sun", "state": "above_horizon"}]}
+    assert not fires(night_only, "on", "off")
