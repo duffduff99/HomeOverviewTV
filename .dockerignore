@@ -8,3 +8,4 @@ tests
 kiosk
 docs
 **/__pycache__
+.venv
