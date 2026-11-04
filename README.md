@@ -62,8 +62,15 @@ Docker host with one or more Pis just displaying the page.
 
 ```bash
 git clone https://github.com/duffduff99/HomeOverviewTV && cd HomeOverviewTV
-pip install -r requirements.txt
-python -m housetv --demo
+python3 -m venv .venv                  # Ubuntu/Debian: sudo apt install python3-venv first
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python -m housetv --demo
+```
+
+Or, with Docker and nothing else installed:
+
+```bash
+docker run --rm -p 8080:8080 -e DEMO=1 ghcr.io/duffduff99/homeoverviewtv:latest
 ```
 
 Open <http://localhost:8080>. In demo mode, <http://localhost:8080/demo/doorbell>,
@@ -206,9 +213,10 @@ isn't. The text comes from `text:`, an attribute (`attribute:`), or the entity's
 ## Development
 
 ```bash
-pip install -r requirements.txt pytest
-python -m pytest -q
-python -m housetv --demo --port 8080
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt pytest
+.venv/bin/python -m pytest -q
+.venv/bin/python -m housetv --demo --port 8080
 ```
 
 The front end is plain HTML/CSS/JavaScript modules with no build step, under `web/`. Each screen
