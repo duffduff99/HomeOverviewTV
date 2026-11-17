@@ -118,6 +118,20 @@ and themes.
 cd ~/house-tv && git pull && docker compose pull && docker compose up -d
 ```
 
+## Install on a mini PC (Intel/AMD)
+
+The same as the Pi steps, except for the operating system:
+
+1. **Install Debian 13 (or 12) without a desktop.** Use the "netinst" image. In the installer, leave
+   the **root password blank** (so your user gets `sudo`). On the software selection screen,
+   untick *Debian desktop environment* and *GNOME*, and tick *SSH server*.
+   Ubuntu Server also works, but Ubuntu ships Chromium as a snap, which doesn't run well in this
+   kiosk setup, so Debian is recommended.
+2. **In the BIOS**, set *Restore on AC power loss* (or similar) to **Power On**, so the channel
+   comes back by itself after a power cut.
+3. Follow steps 2-6 of the Raspberry Pi instructions above (Docker, configure, start, kiosk,
+   music). The kiosk script detects a PC and sets HDMI audio and boot options accordingly.
+
 ## Configuration
 
 Everything is in [`config/config.example.yaml`](config/config.example.yaml), with comments. The

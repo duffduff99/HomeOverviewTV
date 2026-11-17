@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Turn a Raspberry Pi (Raspberry Pi OS Lite, 64-bit, Bookworm or newer) into a
-# full-screen House TV display on the HDMI port.
+# Turn a Raspberry Pi (Raspberry Pi OS Lite, 64-bit) or a small PC running
+# Debian 12/13 without a desktop into a full-screen House TV display on HDMI.
 #
 #   curl -fsSL https://raw.githubusercontent.com/duffduff99/HomeOverviewTV/main/kiosk/install-kiosk.sh | sudo bash -s -- [options]
 #
@@ -100,25 +100,38 @@ WantedBy=graphical.target
 EOF
 
 echo "==> Selecting HDMI audio"
-HDMI_CARD="$(aplay -l 2>/dev/null | awk -F'[ :]' '/^card [0-9]+:.*(vc4hdmi|HDMI)/ {print $2; exit}')"
-if [[ -n "$HDMI_CARD" ]]; then
+# Pi: HDMI is its own card (vc4hdmi). Intel/AMD PCs: HDMI is a device on the
+# same card as the headphone jack, e.g. "card 0: PCH ..., device 3: HDMI 0".
+HDMI_LINE="$(aplay -l 2>/dev/null | grep -E '^card [0-9]+:.*(vc4hdmi|HDMI)' | head -n1 || true)"
+if [[ -n "$HDMI_LINE" ]]; then
+  HDMI_CARD="$(sed -E 's/^card ([0-9]+):.*/\1/' <<<"$HDMI_LINE")"
+  HDMI_DEV="$(sed -E 's/.*device ([0-9]+):.*/\1/' <<<"$HDMI_LINE")"
   HOME_DIR="$(getent passwd "$KIOSK_USER" | cut -d: -f6)"
-  printf 'defaults.pcm.card %s\ndefaults.ctl.card %s\n' "$HDMI_CARD" "$HDMI_CARD" > "$HOME_DIR/.asoundrc"
+  printf 'defaults.pcm.card %s\ndefaults.pcm.device %s\ndefaults.ctl.card %s\n' \
+    "$HDMI_CARD" "$HDMI_DEV" "$HDMI_CARD" > "$HOME_DIR/.asoundrc"
   chown "$KIOSK_USER": "$HOME_DIR/.asoundrc"
-  echo "    HDMI audio is card $HDMI_CARD"
+  echo "    HDMI audio is card $HDMI_CARD, device $HDMI_DEV"
+  echo "    (if there's no sound, edit $HOME_DIR/.asoundrc and try the other HDMI devices from 'aplay -l')"
 else
   echo "    Could not find an HDMI audio device; leaving the default." >&2
 fi
 
+KARGS="consoleblank=0"
+[[ $FORCE_1080P -eq 1 ]] && KARGS="$KARGS video=HDMI-A-1:1920x1080@60D"
 CMDLINE=/boot/firmware/cmdline.txt
 [[ -f $CMDLINE ]] || CMDLINE=/boot/cmdline.txt
-if [[ -f $CMDLINE ]]; then
-  grep -q consoleblank=0 "$CMDLINE" || sed -i 's/$/ consoleblank=0/' "$CMDLINE"
-  if [[ $FORCE_1080P -eq 1 ]] && ! grep -q "video=HDMI-A-1" "$CMDLINE"; then
-    sed -i 's/$/ video=HDMI-A-1:1920x1080@60D/' "$CMDLINE"
-    echo "    Forced HDMI to 1920x1080@60"
-  fi
+if [[ -f $CMDLINE ]]; then                       # Raspberry Pi
+  for arg in $KARGS; do
+    grep -q "${arg%%=*}=" "$CMDLINE" || sed -i "s/\$/ $arg/" "$CMDLINE"
+  done
+elif [[ -f /etc/default/grub ]]; then            # regular PC
+  for arg in $KARGS; do
+    grep -q "${arg%%=*}=" /etc/default/grub || \
+      sed -i "s/^GRUB_CMDLINE_LINUX_DEFAULT=\"/&$arg /" /etc/default/grub
+  done
+  update-grub >/dev/null 2>&1 || true
 fi
+[[ $FORCE_1080P -eq 1 ]] && echo "    Forced HDMI-A-1 to 1920x1080@60"
 
 systemctl daemon-reload
 systemctl disable getty@tty1.service >/dev/null 2>&1 || true
