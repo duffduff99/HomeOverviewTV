@@ -130,7 +130,27 @@ The same as the Pi steps, except for the operating system:
 2. **In the BIOS**, set *Restore on AC power loss* (or similar) to **Power On**, so the channel
    comes back by itself after a power cut.
 3. Follow steps 2-6 of the Raspberry Pi instructions above (Docker, configure, start, kiosk,
-   music). The kiosk script detects a PC and sets HDMI audio and boot options accordingly.
+   music). The kiosk script detects a PC and sets audio and boot options accordingly.
+
+### Kiosk options: VGA, 3.5 mm audio, resolution
+
+By default the kiosk sends sound over HDMI. The picture always goes to whichever screen is
+connected (HDMI, VGA or DisplayPort), and the page scales to any resolution. For a modulator with
+VGA video and a 3.5 mm audio input:
+
+```bash
+sudo ./kiosk/install-kiosk.sh --audio analog
+```
+
+| Option | Meaning |
+|---|---|
+| `--audio hdmi` / `analog` / `default` | Sound over HDMI (default), the 3.5 mm jack, or leave the system default |
+| `--output NAME` | Connector to force a mode on: `HDMI-A-1` (default), `VGA-1`, `DP-1`... (`ls /sys/class/drm/` lists them) |
+| `--resolution WxH` | Force that mode, e.g. `--output VGA-1 --resolution 1280x720` |
+| `--force-1080p` | Shortcut for `--resolution 1920x1080` |
+
+Run the script again with different options to change them, then reboot. If two screens are
+plugged in, unplug the one you don't use.
 
 ## Configuration
 
