@@ -62,8 +62,15 @@ Docker host with one or more Pis just displaying the page.
 
 ```bash
 git clone https://github.com/duffduff99/HomeOverviewTV && cd HomeOverviewTV
-pip install -r requirements.txt
-python -m housetv --demo
+python3 -m venv .venv                  # Ubuntu/Debian: sudo apt install python3-venv first
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python -m housetv --demo
+```
+
+Or, with Docker and nothing else installed:
+
+```bash
+docker run --rm -p 8080:8080 -e DEMO=1 ghcr.io/duffduff99/homeoverviewtv:latest
 ```
 
 Open <http://localhost:8080>. In demo mode, <http://localhost:8080/demo/doorbell>,
@@ -110,6 +117,40 @@ and themes.
 ```bash
 cd ~/house-tv && git pull && docker compose pull && docker compose up -d
 ```
+
+## Install on a mini PC (Intel/AMD)
+
+The same as the Pi steps, except for the operating system:
+
+1. **Install Debian 13 (or 12) without a desktop.** Use the "netinst" image. In the installer, leave
+   the **root password blank** (so your user gets `sudo`). On the software selection screen,
+   untick *Debian desktop environment* and *GNOME*, and tick *SSH server*.
+   Ubuntu Server also works, but Ubuntu ships Chromium as a snap, which doesn't run well in this
+   kiosk setup, so Debian is recommended.
+2. **In the BIOS**, set *Restore on AC power loss* (or similar) to **Power On**, so the channel
+   comes back by itself after a power cut.
+3. Follow steps 2-6 of the Raspberry Pi instructions above (Docker, configure, start, kiosk,
+   music). The kiosk script detects a PC and sets audio and boot options accordingly.
+
+### Kiosk options: VGA, 3.5 mm audio, resolution
+
+By default the kiosk sends sound over HDMI. The picture always goes to whichever screen is
+connected (HDMI, VGA or DisplayPort), and the page scales to any resolution. For a modulator with
+VGA video and a 3.5 mm audio input:
+
+```bash
+sudo ./kiosk/install-kiosk.sh --audio analog
+```
+
+| Option | Meaning |
+|---|---|
+| `--audio hdmi` / `analog` / `default` | Sound over HDMI (default), the 3.5 mm jack, or leave the system default |
+| `--output NAME` | Connector to force a mode on: `HDMI-A-1` (default), `VGA-1`, `DP-1`... (`ls /sys/class/drm/` lists them) |
+| `--resolution WxH` | Force that mode, e.g. `--output VGA-1 --resolution 1280x720` |
+| `--force-1080p` | Shortcut for `--resolution 1920x1080` |
+
+Run the script again with different options to change them, then reboot. If two screens are
+plugged in, unplug the one you don't use.
 
 ## Configuration
 
@@ -206,9 +247,10 @@ isn't. The text comes from `text:`, an attribute (`attribute:`), or the entity's
 ## Development
 
 ```bash
-pip install -r requirements.txt pytest
-python -m pytest -q
-python -m housetv --demo --port 8080
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt pytest
+.venv/bin/python -m pytest -q
+.venv/bin/python -m housetv --demo --port 8080
 ```
 
 The front end is plain HTML/CSS/JavaScript modules with no build step, under `web/`. Each screen
