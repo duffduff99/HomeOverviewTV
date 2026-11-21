@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Turn a Raspberry Pi (Raspberry Pi OS Lite, 64-bit) or a small PC running
-# Debian 12/13 without a desktop into a full-screen House TV display.
+# Ubuntu Server 24.04+ or Debian 12/13 (no desktop) into a full-screen House TV display.
 #
 #   curl -fsSL https://raw.githubusercontent.com/duffduff99/HomeOverviewTV/main/kiosk/install-kiosk.sh | sudo bash -s -- [options]
 #
@@ -50,12 +50,32 @@ done
 [[ $EUID -eq 0 ]] || { echo "Please run with sudo." >&2; exit 1; }
 id "$KIOSK_USER" >/dev/null 2>&1 || { echo "User $KIOSK_USER does not exist (use --user)." >&2; exit 1; }
 
-echo "==> Installing Chromium and cage"
+OS_ID="$(. /etc/os-release && echo "${ID:-}")"
 apt-get update
-CHROMIUM_PKG=chromium
-apt-cache show chromium >/dev/null 2>&1 || CHROMIUM_PKG=chromium-browser
-apt-get install -y --no-install-recommends cage "$CHROMIUM_PKG" fonts-noto-color-emoji alsa-utils curl
-CHROMIUM_BIN="$(command -v chromium || command -v chromium-browser)"
+apt-get install -y --no-install-recommends cage fonts-noto-color-emoji alsa-utils curl ca-certificates gnupg
+if [[ $OS_ID == ubuntu && $(dpkg --print-architecture) == amd64 ]]; then
+  # Ubuntu's "chromium" package is only a wrapper for the snap, whose sandbox
+  # doesn't suit a desktop-less kiosk. Use Google Chrome's regular .deb instead;
+  # it keeps itself updated through apt.
+  echo "==> Installing Google Chrome and cage (Ubuntu)"
+  install -d -m 0755 /etc/apt/keyrings
+  curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor --yes -o /etc/apt/keyrings/google-chrome.gpg
+  echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main" \
+    > /etc/apt/sources.list.d/google-chrome.list
+  apt-get update
+  apt-get install -y google-chrome-stable
+  CHROMIUM_BIN="$(command -v google-chrome-stable)"
+elif [[ $OS_ID == ubuntu ]]; then
+  echo "Ubuntu on $(dpkg --print-architecture) isn't supported (Chrome is x86-only and Ubuntu's Chromium is a snap)." >&2
+  echo "Use Raspberry Pi OS or Debian on this machine." >&2
+  exit 1
+else
+  echo "==> Installing Chromium and cage"
+  CHROMIUM_PKG=chromium
+  apt-cache show chromium >/dev/null 2>&1 || CHROMIUM_PKG=chromium-browser
+  apt-get install -y --no-install-recommends "$CHROMIUM_PKG"
+  CHROMIUM_BIN="$(command -v chromium || command -v chromium-browser)"
+fi
 
 usermod -aG video,render,audio,input "$KIOSK_USER"
 
@@ -71,7 +91,7 @@ done
 exec "$CHROMIUM_BIN" \\
   --kiosk "\$URL" \\
   --ozone-platform=wayland \\
-  --noerrdialogs --disable-infobars --no-first-run --hide-scrollbars \\
+  --noerrdialogs --disable-infobars --no-first-run --no-default-browser-check --hide-scrollbars \\
   --autoplay-policy=no-user-gesture-required \\
   --disable-features=Translate,MediaRouter \\
   --check-for-update-interval=31536000 \\

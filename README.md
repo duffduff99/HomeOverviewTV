@@ -120,17 +120,18 @@ cd ~/house-tv && git pull && docker compose pull && docker compose up -d
 
 ## Install on a mini PC (Intel/AMD)
 
-The same as the Pi steps, except for the operating system:
+Use **Ubuntu Server 24.04 LTS** (or newer) or **Debian 12/13**, without a desktop:
 
-1. **Install Debian 13 (or 12) without a desktop.** Use the "netinst" image. In the installer, leave
-   the **root password blank** (so your user gets `sudo`). On the software selection screen,
-   untick *Debian desktop environment* and *GNOME*, and tick *SSH server*.
-   Ubuntu Server also works, but Ubuntu ships Chromium as a snap, which doesn't run well in this
-   kiosk setup, so Debian is recommended.
+1. **Ubuntu Server:** install it as usual, ticking *Install OpenSSH server*. Skip the optional
+   snaps; Docker is installed in the next steps.
+   **Debian:** use the "netinst" image, leave the root password blank (so your user gets `sudo`),
+   and on *Software selection* untick the desktop and GNOME and tick *SSH server*.
 2. **In the BIOS**, set *Restore on AC power loss* (or similar) to **Power On**, so the channel
    comes back by itself after a power cut.
 3. Follow steps 2-6 of the Raspberry Pi instructions above (Docker, configure, start, kiosk,
-   music). The kiosk script detects a PC and sets audio and boot options accordingly.
+   music). The kiosk script detects a PC and sets audio and boot options accordingly. On Ubuntu
+   it installs **Google Chrome** from Google's apt repository, because Ubuntu's Chromium package
+   is a snap, and snaps don't suit this desktop-less kiosk setup.
 
 ### Kiosk options: VGA, 3.5 mm audio, resolution
 
