@@ -6,7 +6,8 @@
 #
 # Options:
 #   --url URL        page to show (default http://localhost:8080)
-#   --user NAME      user that runs the display (default: the user who ran sudo, else "pi")
+#   --user NAME      user that runs the display (default: "kiosk", created if missing:
+#                    no password, no sudo, no docker access)
 #   --audio WHERE    hdmi (default), analog (3.5 mm / headphone jack) or default (leave as is)
 #   --output NAME    video connector to force a mode on: HDMI-A-1 (default), VGA-1, DP-1...
 #                    (list them with: ls /sys/class/drm/  -> card0-VGA-1 means VGA-1)
@@ -29,7 +30,7 @@
 set -euo pipefail
 
 URL="http://localhost:8080"
-KIOSK_USER="${SUDO_USER:-pi}"
+KIOSK_USER="kiosk"
 AUDIO=hdmi
 OUTPUT=HDMI-A-1
 RESOLUTION=""
@@ -48,7 +49,16 @@ done
 [[ $AUDIO =~ ^(hdmi|analog|default)$ ]] || { echo "--audio must be hdmi, analog or default" >&2; exit 1; }
 [[ -z $RESOLUTION || $RESOLUTION =~ ^[0-9]+x[0-9]+$ ]] || { echo "--resolution looks like 1280x720" >&2; exit 1; }
 [[ $EUID -eq 0 ]] || { echo "Please run with sudo." >&2; exit 1; }
-id "$KIOSK_USER" >/dev/null 2>&1 || { echo "User $KIOSK_USER does not exist (use --user)." >&2; exit 1; }
+if ! id "$KIOSK_USER" >/dev/null 2>&1; then
+  # A dedicated account for the browser: home folder, but no password (can't log
+  # in), no login shell, and not in the sudo or docker groups.
+  echo "==> Creating display user '$KIOSK_USER'"
+  useradd --create-home --shell /usr/sbin/nologin --comment "House TV display" "$KIOSK_USER"
+fi
+if id -nG "$KIOSK_USER" | grep -qwE 'sudo|docker|wheel|adm'; then
+  echo "Warning: $KIOSK_USER is in an admin group (sudo/docker/wheel/adm). The display" >&2
+  echo "         is safer under an unprivileged account (the default 'kiosk')." >&2
+fi
 
 OS_ID="$(. /etc/os-release && echo "${ID:-}")"
 apt-get update

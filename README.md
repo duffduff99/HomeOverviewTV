@@ -83,8 +83,11 @@ and themes.
 2. **Install Docker:**
    ```bash
    curl -fsSL https://get.docker.com | sudo sh
-   sudo usermod -aG docker $USER   # log out and back in afterwards
    ```
+   Optional: `sudo usermod -aG docker $USER` (then log out and back in) lets you run `docker`
+   without `sudo`. Membership in the `docker` group is equivalent to root without a password, so
+   follow whatever policy you use on your other servers. If you skip it, put `sudo` in front of
+   the `docker compose` commands below.
 3. **Get House TV and configure it:**
    ```bash
    git clone https://github.com/duffduff99/HomeOverviewTV ~/house-tv && cd ~/house-tv
@@ -102,13 +105,17 @@ and themes.
    docker compose up -d
    ```
    Check it from any browser at `http://<pi-address>:8080`.
-5. **Turn the HDMI output into a kiosk:**
+5. **Turn the video output into a kiosk:**
    ```bash
    sudo ./kiosk/install-kiosk.sh
    sudo reboot
    ```
-   Options: `--url http://other-host:8080` if the server runs elsewhere, and `--force-1080p` if
-   the modulator negotiates the wrong resolution. Logs: `journalctl -u house-tv-kiosk -f`.
+   The browser runs under its own **`kiosk`** account, which the script creates. It has no
+   password, no `sudo` and no Docker access, so the browser can't touch the rest of the machine
+   even if something went wrong in it. Your admin account is only used to manage the server.
+   Options: `--url http://other-host:8080` if the server runs elsewhere, `--audio analog` for a
+   3.5 mm audio output, and `--force-1080p` if the modulator negotiates the wrong resolution (more
+   options below). Logs: `journalctl -u house-tv-kiosk -f`.
 6. **Add music:** copy MP3s (or m4a/ogg/flac) into `~/house-tv/music/`. New files are picked up
    within a minute, and audio goes out over HDMI.
 
@@ -149,6 +156,7 @@ sudo ./kiosk/install-kiosk.sh --audio analog
 | `--output NAME` | Connector to force a mode on: `HDMI-A-1` (default), `VGA-1`, `DP-1`... (`ls /sys/class/drm/` lists them) |
 | `--resolution WxH` | Force that mode, e.g. `--output VGA-1 --resolution 1280x720` |
 | `--force-1080p` | Shortcut for `--resolution 1920x1080` |
+| `--user NAME` | Account the browser runs as (default `kiosk`, created automatically, unprivileged) |
 
 Run the script again with different options to change them, then reboot. If two screens are
 plugged in, unplug the one you don't use.
