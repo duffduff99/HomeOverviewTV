@@ -60,7 +60,9 @@ screens:
     humidity: sensor.outdoor_humidity
     air_quality: sensor.outdoor_pm25      # AQI number, or a PM2.5 sensor in µg/m³ (converted to AQI)
     wind: sensor.wind_speed               # optional; falls back to the weather entity
-    forecast: daily                       # daily or hourly
+    forecast: daily                       # daily or hourly. Works with any weather
+                                          # integration; for the US National Weather
+                                          # Service, day and night periods are combined
     forecast_count: 5
     # Air quality gauges (up to 4), coloured by health level with the level
     # name written underneath. kind: pm25, pm10, pm1, pm03, voc, nox, co2, other
@@ -140,10 +142,15 @@ screens:
   #     - { entity: sun.sun, state: above_horizon }
   #   tiles: [sensor.pv1_power, sensor.pv2_power, sensor.pv3_power]
 
-# Bottom bar: what's playing on these media players (only shown while playing)
+# Bottom bar: what's playing. Two kinds of entity work here:
+#  - media players (media_player.*): shown only while playing
+#  - text sensors (sensor.*, input_text.*, text.*) whose value is the current
+#    track: shown whenever they have a value. If the text is "Artist - Title",
+#    add split: " - " to show the title large and the artist underneath
+#    (order: title_artist if yours is "Title - Artist").
 now_playing:
   media_players:
-    - { entity: media_player.house_fm, name: House FM }
+    - { entity: sensor.house_fm_now_playing, name: House FM, split: " - " }
     - { entity: media_player.kitchen, name: Kitchen }
 
 # Message board: any text entity (e.g. an input_text helper). Also settable

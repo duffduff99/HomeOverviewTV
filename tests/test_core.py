@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 from housetv import conditions
 from housetv.config import load, normalise, watched_entities
 from housetv.hub import Hub
+from housetv.forecast import choose_type, merge_twice_daily
 from housetv.energy import stats_from_prefs, summarise
 from housetv.themes import scheduled_theme
 
@@ -101,3 +102,24 @@ def test_interrupt_triggers():
     assert not fires(ev, "2026-11-03T10:00:01", None)
     night_only = {**on, "when": [{"entity": "sun.sun", "state": "above_horizon"}]}
     assert not fires(night_only, "on", "off")
+
+
+def test_forecast_type_choice():
+    assert choose_type("daily", 6) == "twice_daily"   # NWS: hourly + twice daily
+    assert choose_type("daily", 3) == "daily"
+    assert choose_type("hourly", 4) == "twice_daily"
+    assert choose_type("daily", None) == "daily"       # unknown: ask for what was configured
+
+
+def test_merge_twice_daily():
+    rows = [
+        {"datetime": "d0n", "is_daytime": False, "temperature": 40, "condition": "clear-night"},
+        {"datetime": "d1", "is_daytime": True, "temperature": 60, "precipitation_probability": 10},
+        {"datetime": "d1n", "is_daytime": False, "temperature": 42, "precipitation_probability": 30},
+        {"datetime": "d2", "is_daytime": True, "temperature": 58},
+    ]
+    out = merge_twice_daily(rows)
+    assert [r["datetime"] for r in out] == ["d0n", "d1", "d2"]
+    assert out[0]["label"] == "Tonight" and out[0]["temperature"] is None and out[0]["templow"] == 40
+    assert out[1]["temperature"] == 60 and out[1]["templow"] == 42 and out[1]["precipitation_probability"] == 30
+    assert out[2]["templow"] is None
