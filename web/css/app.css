@@ -366,6 +366,26 @@ body:not(.no-effects) .stat { backdrop-filter: blur(22px); -webkit-backdrop-filt
 .cal-time { font-size: 19px; font-weight: 700; color: var(--accent); letter-spacing: 0.04em; }
 .cal-title { font-size: 28px; font-weight: 650; line-height: 1.2; }
 .cal-meta { font-size: 18px; color: var(--muted); margin-top: 2px; }
+.cal-rel { margin-left: 12px; padding: 3px 12px; border-radius: 999px; font-size: 17px; font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--text); vertical-align: 2px; }
+.screen-calendar.with-tasks { display: grid; grid-template-columns: minmax(0, 1fr) 560px; gap: var(--gap); }
+.screen-calendar.with-tasks.tasks-only { grid-template-columns: 1fr; }
+.tasks-panel { padding: 30px 32px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.tasks-only .task-groups { columns: 2; column-gap: 48px; }
+.task-count { font-size: 18px; font-weight: 650; color: var(--text-2); }
+.task-groups { margin-top: 18px; display: flex; flex-direction: column; gap: 22px; }
+.tasks-only .task-groups { display: block; }
+.task-group { break-inside: avoid; margin-bottom: 18px; }
+.task-list-name { font-size: 16px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+.task { display: flex; gap: 16px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.07); break-inside: avoid; }
+.task-check { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--accent); flex: none; margin-top: 3px; }
+.task-check.done { background: var(--good); border-color: var(--good); width: 64px; height: 64px; }
+.task-title { font-size: 26px; font-weight: 600; line-height: 1.25; }
+.task-due { font-size: 18px; color: var(--muted); margin-top: 3px; font-weight: 600; }
+.task-due.today { color: var(--accent); }
+.task-due.overdue { color: #fca5a5; }
+.task-more { font-size: 18px; color: var(--muted); margin-top: 8px; }
+.tasks-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; font-size: 32px; font-weight: 650; color: var(--text-2); }
 .cal-empty { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; font-size: 40px; font-weight: 650; }
 .cal-empty .metric-sub { margin: 0; font-size: 24px; }
 .cal-empty-icon { font-size: 100px; color: var(--accent); }
@@ -394,6 +414,8 @@ body.no-effects #lower { background: rgba(13, 19, 33, 0.86); }
 .ticker-text { min-width: 0; }
 .ticker-title { font-size: 30px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ticker-sub { font-size: 19px; color: var(--text-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.no-lower #lower { display: none; }
+body.no-lower { --lower-h: calc(-1 * var(--gap)); }
 .bgm {
   display: flex; align-items: center; gap: 12px; padding: 0 30px; max-width: 560px; flex: none;
   font-size: 19px; color: var(--text-2); font-weight: 550; border-left: 1px solid rgba(255,255,255,.1);

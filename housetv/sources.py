@@ -72,6 +72,10 @@ class HASource:
              "end_date_time": (now + timedelta(days=days)).isoformat()})
         return {eid: (resp.get(eid) or {}).get("events") or [] for eid in entity_ids}
 
+    async def todo(self, entity_ids: list[str]) -> dict[str, list[dict]]:
+        resp = await self.ha.service_response("todo", "get_items", entity_ids, {"status": ["needs_action"]})
+        return {eid: (resp.get(eid) or {}).get("items") or [] for eid in entity_ids}
+
     async def energy_today(self) -> dict | None:
         return await self.energy.fetch_today()
 
@@ -171,7 +175,8 @@ class DemoSource:
             _st("media_player.house_fm", "playing", friendly_name="House FM",
                 media_title=title, media_artist=artist),
             _st("media_player.kitchen", "idle", friendly_name="Kitchen Speaker"),
-            _st("sensor.house_fm_now_playing", f"{artist} - {title}", friendly_name="House FM Now Playing"),
+            _st("sensor.house_fm_now_playing", f"{artist} - {title}", friendly_name="House FM Now Playing",
+                artist=artist, title=title, album="Greatest Hits"),
             _st("input_text.tv_message", "Welcome home! Dinner is at 6:30.", friendly_name="TV Message"),
             _st("binary_sensor.front_door_motion", "off", friendly_name="Front Door Motion"),
             _st("binary_sensor.weather_alert", "off", friendly_name="Weather Alert", title=""),
@@ -234,6 +239,18 @@ class DemoSource:
                 out.append({"summary": title, "start": start.isoformat(),
                             "end": (start + timedelta(hours=length)).isoformat()})
         return {entity_ids[0]: out} if entity_ids else {}
+
+    async def todo(self, entity_ids: list[str]) -> dict[str, list[dict]]:
+        today = datetime.now().date()
+        lists = [
+            [{"summary": "Change furnace filter", "due": (today - timedelta(days=2)).isoformat()},
+             {"summary": "Take out recycling", "due": today.isoformat()},
+             {"summary": "Pick up dry cleaning", "due": (today + timedelta(days=1)).isoformat()},
+             {"summary": "Schedule gutter cleaning", "due": (today + timedelta(days=5)).isoformat()},
+             {"summary": "Order new garden hose"}],
+            [{"summary": "Milk"}, {"summary": "Eggs"}, {"summary": "Coffee beans"}],
+        ]
+        return {eid: lists[i % len(lists)] for i, eid in enumerate(entity_ids)}
 
     async def energy_today(self) -> dict | None:
         now = datetime.now()

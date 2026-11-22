@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import time
+import uuid
 from datetime import date
 from pathlib import Path
 from typing import Any, Callable
@@ -39,7 +40,10 @@ class Hub:
         self.watched = watched_entities(self.cfg)
         self.states: dict[str, dict] = {}
         self.clients: set[web.WebSocketResponse] = set()
-        self.data: dict[str, Any] = {"forecast": {}, "calendar": {}, "energy": None, "history": {}}
+        self.data: dict[str, Any] = {"forecast": {}, "calendar": {}, "todo": {}, "energy": None, "history": {}}
+        # Changes every time the server starts, so displays reload new page code after an update.
+        self.version = uuid.uuid4().hex
+        self._last_refresh: dict[str, float] = {}
         self.overrides: dict[str, Any] = self._load_overrides()
         self.screen_index = -1
         self.screen: dict | None = None
@@ -82,7 +86,7 @@ class Hub:
             asyncio.create_task(coro)
 
     def on_source_ready(self) -> None:
-        self._refresh_now.set()
+        self.request_refresh()
 
     # -------------------------------------------------------- derived values
     @property
@@ -145,7 +149,7 @@ class Hub:
 
     def init_payload(self) -> dict:
         watched = {k: v for k, v in self.states.items() if k in self.watched or k.startswith("camera.")}
-        return {"type": "init", "config": self.public_config(), "theme": self.theme,
+        return {"type": "init", "version": self.version, "config": self.public_config(), "theme": self.theme,
                 "themes": sorted(self.themes.themes), "states": watched, "data": self.data,
                 "screen": self.screen_payload(), "music": self.music_payload(),
                 "alerts": self.alerts, "message": self.message, "interrupt": self.interrupt,
@@ -196,6 +200,9 @@ class Hub:
             return
         self._fire({"type": "states", "states": {entity_id: self.states.get(entity_id)}})
         self._check_interrupts(entity_id, new, old)
+        if entity_id.startswith("todo."):  # its state is the open-item count; refetch the items
+            self.request_refresh([s["id"] for s in self.cfg["screens"]
+                                  if any(t["entity"] == entity_id for t in s.get("todo_lists", []))])
         self._recompute_alerts()
         if entity_id == self.cfg["message"].get("entity"):
             self._fire({"type": "message", "message": self.message})
@@ -363,12 +370,20 @@ class Hub:
         self._notify("track")
 
     # ----------------------------------------------------- background loops
+    def request_refresh(self, screen_ids: list[str] | None = None) -> None:
+        """Refresh fetched data (forecast, calendar, tasks, energy) now instead of on schedule."""
+        if screen_ids is None:
+            self._last_refresh.clear()
+        else:
+            for sid in screen_ids:
+                self._last_refresh.pop(sid, None)
+        self._refresh_now.set()
+
     async def _refresh_loop(self) -> None:
-        last: dict[str, float] = {}
+        last = self._last_refresh
         while True:
             try:
                 await asyncio.wait_for(self._refresh_now.wait(), 30)
-                last.clear()  # source (re)connected: refresh everything now
             except asyncio.TimeoutError:
                 pass
             self._refresh_now.clear()
@@ -395,11 +410,17 @@ class Hub:
             last[key] = now
             await self.broadcast({"type": "data", "key": "forecast", "id": key, "value": fc})
         elif s["type"] == "calendar" and now - last.get(key, 0) > 600:
-            ids = [c["entity"] for c in s["calendars"]]
-            events = await self.source.calendar(ids, int(s.get("days", 7)))
-            self.data["calendar"][key] = events
             last[key] = now
-            await self.broadcast({"type": "data", "key": "calendar", "id": key, "value": events})
+            cal_ids = [c["entity"] for c in s["calendars"]]
+            if cal_ids:
+                events = await self.source.calendar(cal_ids, int(s.get("days", 7)))
+                self.data["calendar"][key] = events
+                await self.broadcast({"type": "data", "key": "calendar", "id": key, "value": events})
+            todo_ids = [t["entity"] for t in s["todo_lists"]]
+            if todo_ids:
+                tasks = await self.source.todo(todo_ids)
+                self.data["todo"][key] = tasks
+                await self.broadcast({"type": "data", "key": "todo", "id": key, "value": tasks})
         elif s["type"] == "energy" and now - last.get(key, 0) > 240:
             last[key] = now
             if s.get("use_energy_dashboard", True):
@@ -427,7 +448,7 @@ class Hub:
                 self._apply_theme()
                 if date.today() != today:
                     today = date.today()
-                    self._refresh_now.set()
+                    self.request_refresh()
                 if self.music.scan():
                     await self.broadcast({"type": "music", "music": self.music_payload()})
 
@@ -442,7 +463,7 @@ class Hub:
         self.watched = watched_entities(cfg)
         self.theme = self.themes.resolve(cfg, self.overrides.get("theme"))
         self._recompute_alerts()
-        self._refresh_now.set()
+        self.request_refresh()
         await self.broadcast(self.init_payload())
         self._notify("config")
         self._wake.set()

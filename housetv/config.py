@@ -18,6 +18,7 @@ import yaml
 log = logging.getLogger(__name__)
 
 SCREEN_TYPES = {"weather", "energy", "cameras", "calendar", "tiles", "air"}
+TYPE_ALIASES = {"agenda": "calendar", "tasks": "calendar", "todo": "calendar"}
 
 DEFAULTS: dict[str, Any] = {
     "name": "Our House",
@@ -34,7 +35,7 @@ DEFAULTS: dict[str, Any] = {
     "theme": {"default": "night", "schedule": []},
     "header": {"temperature": None, "weather": None},
     "screens": [],
-    "now_playing": {"media_players": []},
+    "now_playing": {"media_players": [], "show_up_next": True},
     "message": {"entity": None},
     "alerts": [],
     "interrupts": [],
@@ -54,7 +55,8 @@ SCREEN_DEFAULTS: dict[str, dict[str, Any]] = {
     "weather": {"title": "Outside", "forecast": "daily", "forecast_count": 5},
     "energy": {"title": "Energy", "use_energy_dashboard": True, "power": {}},
     "cameras": {"title": "Cameras", "mode": "live", "snapshot_interval": 3, "cameras": []},
-    "calendar": {"title": "Calendar", "calendars": [], "days": 7, "max_events": 8},
+    "calendar": {"title": "Coming Up", "calendars": [], "todo_lists": [], "days": 7,
+                 "max_events": 8, "max_tasks": 10},
     "tiles": {"title": "Around the House"},
     "air": {"title": "Air Quality", "gauges": []},
 }
@@ -119,7 +121,8 @@ def normalise(raw: dict) -> dict:
     for idx, screen in enumerate(as_list(cfg.get("screens"))):
         if not isinstance(screen, dict):
             continue
-        stype = screen.get("type")
+        stype = TYPE_ALIASES.get(screen.get("type"), screen.get("type"))
+        screen = {**screen, "type": stype}
         if stype not in SCREEN_TYPES:
             log.warning("Ignoring screen %d: unknown type %r (expected one of %s)",
                         idx + 1, stype, ", ".join(sorted(SCREEN_TYPES)))
@@ -142,6 +145,7 @@ def normalise(raw: dict) -> dict:
             s["gauges"] = normalise_entity_list(s.get("gauges"))[:6]
         if stype == "calendar":
             s["calendars"] = normalise_entity_list(s.get("calendars"))
+            s["todo_lists"] = normalise_entity_list(s.get("todo_lists"))
         screens.append(s)
     cfg["screens"] = screens
 
@@ -184,7 +188,7 @@ def watched_entities(cfg: dict) -> set[str]:
             if isinstance(cond, dict):
                 add(cond.get("entity"))
     for s in cfg["screens"]:
-        for t in s["tiles"] + s.get("gauges", []) + s.get("air_gauges", []):
+        for t in s["tiles"] + s.get("gauges", []) + s.get("air_gauges", []) + s.get("todo_lists", []):
             add(t["entity"])
         for cond in s["show_when"]:
             if isinstance(cond, dict):

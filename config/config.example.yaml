@@ -104,13 +104,16 @@ screens:
       - { entity: camera.camera_3, name: Back Yard }
       - { entity: camera.camera_4, name: Side Gate }
 
-  - type: calendar
+  - type: calendar          # "Coming Up": calendar events and/or to-do lists
     title: Coming Up
-    enabled: false          # flip to true when you start using a calendar
+    enabled: false          # flip to true when you start using it
     duration: 15
-    days: 7
-    calendars:
+    days: 7                 # how far ahead to look for events
+    calendars:              # optional
       - { entity: calendar.family, name: Family }
+    todo_lists:             # optional: any to-do list in Home Assistant
+      - { entity: todo.shopping_list, name: Shopping }
+    max_tasks: 10
 
   - type: tiles
     title: Around the House
@@ -145,10 +148,14 @@ screens:
 # Bottom bar: what's playing. Two kinds of entity work here:
 #  - media players (media_player.*): shown only while playing
 #  - text sensors (sensor.*, input_text.*, text.*) whose value is the current
-#    track: shown whenever they have a value. If the text is "Artist - Title",
+#    track: shown whenever they have a value. If the sensor has title/artist
+#    attributes they're used automatically. Otherwise, if the text is "Artist - Title",
 #    add split: " - " to show the title large and the artist underneath
 #    (order: title_artist if yours is "Title - Artist").
+# show_up_next: false hides the "Up Next" item shown when nothing else is
+# playing; if the bar then has nothing to show, it disappears.
 now_playing:
+  show_up_next: true
   media_players:
     - { entity: sensor.house_fm_now_playing, name: House FM, split: " - " }
     - { entity: media_player.kitchen, name: Kitchen }
