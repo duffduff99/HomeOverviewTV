@@ -144,7 +144,8 @@ class DemoSource:
                 next_rising=(now.replace(hour=7, minute=12) + timedelta(days=1)).astimezone().isoformat(),
                 next_setting=now.replace(hour=17, minute=41).astimezone().isoformat()),
             _st("weather.home", "partlycloudy", temperature=58, humidity=64, wind_speed=8,
-                temperature_unit="°F", wind_speed_unit="mph", friendly_name="Home"),
+                temperature_unit="°F", wind_speed_unit="mph", friendly_name="Home",
+                supported_features=6),  # hourly + twice-daily, like the US NWS integration
             _st("sensor.outdoor_temperature", round(random.uniform(57, 58.4), 1),
                 unit_of_measurement="°F", friendly_name="Outdoor Temperature", device_class="temperature"),
             _st("sensor.outdoor_humidity", 64, unit_of_measurement="%", friendly_name="Outdoor Humidity"),
@@ -170,6 +171,7 @@ class DemoSource:
             _st("media_player.house_fm", "playing", friendly_name="House FM",
                 media_title=title, media_artist=artist),
             _st("media_player.kitchen", "idle", friendly_name="Kitchen Speaker"),
+            _st("sensor.house_fm_now_playing", f"{artist} - {title}", friendly_name="House FM Now Playing"),
             _st("input_text.tv_message", "Welcome home! Dinner is at 6:30.", friendly_name="TV Message"),
             _st("binary_sensor.front_door_motion", "off", friendly_name="Front Door Motion"),
             _st("binary_sensor.weather_alert", "off", friendly_name="Weather Alert", title=""),
@@ -193,11 +195,23 @@ class DemoSource:
             fresh = self._states()
             for eid in ("sensor.pv_power", "sensor.battery_power", "sensor.grid_power",
                         "sensor.home_power", "sensor.outdoor_temperature", "media_player.house_fm",
+                        "sensor.house_fm_now_playing",
                         "sensor.pv1_power", "sensor.pv2_power", "sensor.pv3_power"):
                 self.hub.update_state(eid, fresh[eid], None)
 
     async def forecast(self, entity_id: str, kind: str) -> list[dict]:
         today = datetime.now().replace(hour=12, minute=0, second=0, microsecond=0)
+        if kind == "twice_daily":  # starts with tonight, like NWS in the evening
+            conds = ["clear-night", "sunny", "partlycloudy", "rainy", "cloudy", "sunny", "partlycloudy", "snowy"]
+            rows = []
+            for i in range(13):
+                day = i % 2 == 1
+                start = today.replace(hour=6 if day else 18) + timedelta(days=(i + 1) // 2)
+                rows.append({"datetime": start.astimezone().isoformat(), "is_daytime": day,
+                             "condition": conds[i % len(conds)],
+                             "temperature": (62 - i) if day else (44 - i // 2),
+                             "precipitation_probability": [0, 10, 60, 20, 0, 40, 5][i % 7]})
+            return rows
         conds = ["partlycloudy", "sunny", "rainy", "cloudy", "sunny", "snowy", "partlycloudy"]
         return [{"datetime": (today + timedelta(days=i)).astimezone().isoformat(),
                  "condition": conds[i % len(conds)], "temperature": 61 - i * 2 + (i % 2) * 3,

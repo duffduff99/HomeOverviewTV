@@ -226,7 +226,22 @@ function buildTickerItems() {
   const items = [];
   for (const mp of app.config?.now_playing?.media_players || []) {
     const st = ctx.st(mp.entity);
-    if (!st || st.state !== "playing") continue;
+    if (!st) continue;
+    if (!mp.entity.startsWith("media_player.")) {
+      // A text sensor (sensor., input_text., text.) whose value is the current track.
+      const text = String(st.state ?? "").trim();
+      if (!text || ["unknown", "unavailable", "none", "off", "idle", "-"].includes(text.toLowerCase())) continue;
+      let title = text, artist = null;
+      if (mp.split && text.includes(mp.split)) {
+        const [first, ...rest] = text.split(mp.split);
+        [artist, title] = [first.trim(), rest.join(mp.split).trim()];
+        if (mp.order === "title_artist") [artist, title] = [title, artist];
+      }
+      items.push({ kind: "playing", tag: "Now Playing", icon: "radio", title,
+        sub: [artist, `on ${mp.name || friendly(st)}`].filter(Boolean).join("  ·  "), art: st.attributes?.entity_picture });
+      continue;
+    }
+    if (st.state !== "playing") continue;
     const a = st.attributes || {};
     const title = a.media_title || a.media_channel || a.app_name;
     if (!title) continue;

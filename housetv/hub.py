@@ -17,7 +17,7 @@ from typing import Any, Callable
 
 from aiohttp import web
 
-from . import conditions
+from . import conditions, forecast
 from .config import load, watched_entities
 from .music import MusicLibrary
 from .themes import Themes
@@ -384,7 +384,13 @@ class Hub:
     async def _refresh_screen(self, s: dict, now: float, last: dict) -> None:
         key = s["id"]
         if s["type"] == "weather" and s.get("weather") and now - last.get(key, 0) > 900:
-            fc = await self.source.forecast(s["weather"], s.get("forecast", "daily"))
+            requested = s.get("forecast", "daily")
+            attrs = (self.states.get(s["weather"]) or {}).get("attributes") or {}
+            kind = forecast.choose_type(requested, attrs.get("supported_features"))
+            last[key] = now  # don't retry a failing forecast every 30 s
+            fc = await self.source.forecast(s["weather"], kind)
+            if kind == "twice_daily":
+                fc = forecast.merge_twice_daily(fc)
             self.data["forecast"][key] = fc
             last[key] = now
             await self.broadcast({"type": "data", "key": "forecast", "id": key, "value": fc})

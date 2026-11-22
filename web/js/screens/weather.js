@@ -103,13 +103,16 @@ export function create(cfg, ctx) {
       lastForecast = fc;
       ref.forecast.replaceChildren(...fc.slice(0, cfg.forecast_count || 5).map((f, i) => {
         const d = new Date(f.datetime);
-        const label = cfg.forecast === "hourly" ? fmtTime(d)
-          : i === 0 ? "Today" : fmtDate(d, { weekday: "short" });
+        const label = f.label || (cfg.forecast === "hourly" ? fmtTime(d)
+          : i === 0 ? "Today" : fmtDate(d, { weekday: "short" }));
+        const lowOnly = !isNum(f.temperature) && isNum(f.templow);
         return h("div.fc-day",
           h("div.fc-label", label),
-          icon(weatherIcon(f.condition), "fc-icon"),
-          h("div.fc-temp", isNum(f.temperature) ? `${Math.round(f.temperature)}°` : "—",
-            isNum(f.templow) ? h("span.fc-low", `${Math.round(f.templow)}°`) : null),
+          icon(weatherIcon(f.condition, f.is_daytime === false), "fc-icon"),
+          lowOnly
+            ? h("div.fc-temp", h("span.fc-low", "Low "), `${Math.round(f.templow)}°`)
+            : h("div.fc-temp", isNum(f.temperature) ? `${Math.round(f.temperature)}°` : "—",
+              isNum(f.templow) ? h("span.fc-low", `${Math.round(f.templow)}°`) : null),
           h("div.fc-precip", isNum(f.precipitation_probability) && f.precipitation_probability > 0
             ? [icon("rain"), `${Math.round(f.precipitation_probability)}%`] : " "),
         );
