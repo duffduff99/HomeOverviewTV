@@ -10,7 +10,8 @@ Home Assistant data:
   chart read straight from your **Home Assistant Energy dashboard**
 - **Air quality** (optional, more detail): up to six gauges for PM2.5 / PM10 / PM1 / PM0.3 / VOC / NOx / CO₂
 - **Cameras:** up to four live feeds
-- **Calendar** (optional) and a free-form **tiles** screen for anything else
+- **Coming Up** (optional): calendar events by day, and to-do lists from Home Assistant
+- A free-form **tiles** screen for anything else
 
 It also has an always-on header (clock, weather), a lower third with **what's playing** on chosen
 media players and a **message board**, a scrolling **alert** banner, **camera pop-ups** (e.g. when
@@ -122,8 +123,24 @@ and themes.
 ### Updating
 
 ```bash
-cd ~/house-tv && git pull && docker compose pull && docker compose up -d
+cd ~/house-tv && git pull
 ```
+
+Then, if `docker-compose.yml` uses the published image:
+
+```bash
+sudo docker compose pull && sudo docker compose up -d
+```
+
+or, if you switched it to `build: .`:
+
+```bash
+sudo docker compose up -d --build
+```
+
+The TV reloads the new version by itself once the server restarts. Your `config.yaml`, `.env` and
+music aren't touched by `git pull`. If `git pull` says local changes would be overwritten (usually
+your `docker-compose.yml` edit), run `git stash && git pull && git stash pop`.
 
 ## Install on a mini PC (Intel/AMD)
 
@@ -178,6 +195,13 @@ highlights:
 - **Cameras:** for best results, point at your cameras' **sub-streams**. With the Generic Camera
   integration, add a second camera entity in HA whose stream URL is the sub-stream.
 - **Transitions:** `display.transition_seconds` sets the crossfade length.
+- **Now playing:** list media players and/or text sensors under `now_playing.media_players`. A text
+  sensor with `title`/`artist` attributes is shown as title and artist automatically; otherwise
+  `split: " - "` splits "Artist - Title". `show_up_next: false` hides the "Up Next" filler, and
+  the bottom bar disappears when there's nothing to show.
+- **Coming Up:** `type: calendar` with `calendars:` and/or `todo_lists:` (any HA to-do list, such as
+  `todo.shopping_list`). Open tasks show with due dates, overdue ones highlighted, and the list
+  refreshes as soon as it changes in Home Assistant.
 - **TV overscan:** if the edges are cut off, raise `display.safe_area` (percent).
 
 ## Themes

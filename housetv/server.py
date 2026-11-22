@@ -152,4 +152,14 @@ def build_app(hub: Hub, web_dir: Path, music_dir: Path, session: aiohttp.ClientS
 
     app.add_routes(routes)
     app.router.add_static("/static/", web_dir, append_version=False)
+
+    @web.middleware
+    async def revalidate_static(request: web.Request, handler):
+        # Always check page code for changes (cheap 304s on a LAN) so updates show up.
+        resp = await handler(request)
+        if request.path.startswith("/static/"):
+            resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
+    app.middlewares.append(revalidate_static)
     return app

@@ -50,6 +50,9 @@ function setConnection(ok, haOk = true) {
 function handle(msg) {
   switch (msg.type) {
     case "init":
+      // The server restarted with (possibly) new code: load it, rather than keep running the old page.
+      if (app.version && msg.version && msg.version !== app.version) { location.reload(); return; }
+      app.version = msg.version;
       app.config = msg.config;
       app.states = msg.states || {};
       app.data = msg.data || {};
@@ -232,7 +235,11 @@ function buildTickerItems() {
       const text = String(st.state ?? "").trim();
       if (!text || ["unknown", "unavailable", "none", "off", "idle", "-"].includes(text.toLowerCase())) continue;
       let title = text, artist = null;
-      if (mp.split && text.includes(mp.split)) {
+      const at = st.attributes || {};
+      if (at.title || at.media_title) {          // separate title/artist attributes, if the sensor has them
+        title = at.title || at.media_title;
+        artist = at.artist || at.media_artist || null;
+      } else if (mp.split && text.includes(mp.split)) {
         const [first, ...rest] = text.split(mp.split);
         [artist, title] = [first.trim(), rest.join(mp.split).trim()];
         if (mp.order === "title_artist") [artist, title] = [title, artist];
@@ -262,7 +269,12 @@ function renderTicker() {
   }
   const tr = app.track;
   $("#bgm").hidden = !tr;
+  updateLowerBar(!$("#ticker-tag").hidden);
   if (tr) $("#bgm-title").textContent = [tr.title, tr.artist].filter(Boolean).join(" — ");
+}
+// Hide the whole bottom bar when it would be empty (no track, message, up-next or music).
+function updateLowerBar(hasItem) {
+  document.body.classList.toggle("no-lower", !hasItem && !app.track);
 }
 function upNextItem() {
   const ids = [...app.screens.keys()];
@@ -271,8 +283,11 @@ function upNextItem() {
   return { kind: "next", tag: "Up Next", icon: "info", title: nxt.cfg.title || nxt.cfg.type, sub: app.config.name };
 }
 function showTickerItem() {
-  const item = tickerItems[tickerIndex] || upNextItem();
+  const showNext = app.config?.now_playing?.show_up_next !== false;
+  const item = tickerItems[tickerIndex] || (showNext ? upNextItem() : null);
   const box = $("#ticker-item");
+  $("#ticker-tag").hidden = !item;
+  updateLowerBar(!!item);
   if (!item) { box.replaceChildren(); return; }
   $("#ticker-tag-label").textContent = item.tag;
   setIcon($("#ticker-tag-icon"), item.icon);
