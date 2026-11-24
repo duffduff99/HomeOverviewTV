@@ -28,6 +28,9 @@ DEFAULTS: dict[str, Any] = {
         "safe_area": 3,          # % margin on every edge (TV overscan)
         "effects": True,         # animated seasonal particles
         "transition_seconds": 1, # crossfade length between screens
+        "brightness": 1.0,       # picture adjustments, 1.0 = unchanged
+        "contrast": 1.0,
+        "saturation": 1.0,
         "time_format": "12h",    # 12h | 24h
         "locale": "en-US",
     },

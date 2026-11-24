@@ -130,6 +130,10 @@ function buildScreens() {
   $("#stage").style.setProperty("--safe-x", `${(display.safe_area ?? 3) * 19.2}px`);
   $("#stage").style.setProperty("--safe-y", `${(display.safe_area ?? 3) * 10.8}px`);
   $("#stage").style.setProperty("--fade", `${Math.max(0, Number(display.transition_seconds ?? 1))}s`);
+  // Picture adjustments, to compensate for a modulator or TV that shifts the image.
+  const adj = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.min(n, 3) : 1; };
+  const [br, co, sa] = [adj(display.brightness), adj(display.contrast), adj(display.saturation)];
+  $("#stage").style.filter = br === 1 && co === 1 && sa === 1 ? "" : `brightness(${br}) contrast(${co}) saturate(${sa})`;
   $("#brand-name").textContent = app.config.name;
   $("#brand-sub").textContent = app.config.subtitle;
   document.title = `${app.config.name} TV`;

@@ -179,6 +179,27 @@ sudo ./kiosk/install-kiosk.sh --audio analog
 Run the script again with different options to change them, then reboot. If two screens are
 plugged in, unplug the one you don't use.
 
+### Calibrating a modulator (test patterns)
+
+`kiosk/test-pattern.sh` shows a test pattern instead of the channel, at the kiosk's resolution:
+
+```bash
+sudo ./kiosk/test-pattern.sh white      # also: black, gray, ramp (gray steps), bars (colour bars)
+sudo ./kiosk/test-pattern.sh off        # back to the channel
+```
+
+Some modulators (e.g. ZeeVee ZvPro) auto-calibrate their VGA input whenever they detect a signal,
+using whatever is on screen at that moment. For those, use `--for`:
+
+```bash
+sudo ./kiosk/test-pattern.sh white --for 120
+```
+
+Then unplug and re-plug the VGA cable at the modulator while the screen is white. After 2 minutes
+the channel comes back by itself, without a restart or video-mode change that could trigger
+another calibration. For anything left over, adjust `display.brightness`, `contrast` and
+`saturation` in `config.yaml`; changes apply as soon as you save.
+
 ## Configuration
 
 Everything is in [`config/config.example.yaml`](config/config.example.yaml), with comments. The
