@@ -170,9 +170,10 @@ sudo ./kiosk/install-kiosk.sh --audio analog
 | Option | Meaning |
 |---|---|
 | `--audio hdmi` / `analog` / `default` | Sound over HDMI (default), the 3.5 mm jack, or leave the system default |
-| `--output NAME` | Connector to force a mode on: `HDMI-A-1` (default), `VGA-1`, `DP-1`... (`ls /sys/class/drm/` lists them) |
-| `--resolution WxH` | Force that mode, e.g. `--output VGA-1 --resolution 1280x720` |
+| `--resolution WxH` | Use this mode instead of the screen's preferred one (some modulators prefer 720p), e.g. `--resolution 1920x1080` |
 | `--force-1080p` | Shortcut for `--resolution 1920x1080` |
+| `--output NAME` | Only apply `--resolution` to this output (e.g. `DP-1`). Output names and their modes are logged each time the display starts: `journalctl -u house-tv-kiosk` |
+| `--show-cursor` | Keep mice and touchpads working. By default they're ignored so no cursor appears on the TV (wireless keyboard receivers often count as a mouse) |
 | `--user NAME` | Account the browser runs as (default `kiosk`, created automatically, unprivileged) |
 
 Run the script again with different options to change them, then reboot. If two screens are
