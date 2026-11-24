@@ -16,10 +16,15 @@ def test_example_config_loads():
     cfg = load(ROOT / "config" / "config.example.yaml")
     types = [s["type"] for s in cfg["screens"]]
     assert "calendar" not in types  # disabled in the example
-    assert types[:3] == ["weather", "energy", "cameras"]
-    assert [g["kind"] for g in cfg["screens"][0]["air_gauges"]] == ["pm25", "voc"]
+    assert types[:5] == ["weather", "energy", "indoor", "news", "cameras"]
+    news_screen = cfg["screens"][3]
+    assert [f["name"] for f in news_screen["feeds"]] == ["AP", "NPR", "BBC"]  # defaults
+    assert [g["kind"] for g in cfg["screens"][0]["air_gauges"]] == ["pm25", "pm10", "pm1", "voc", "nox", "co2"]
+    indoor = cfg["screens"][2]
+    assert len(indoor["rooms"]) == 5 and indoor["erv"]["boost"] == "switch.erv_boost"
     ids = watched_entities(cfg)
     assert "sensor.pv_power" in ids and "sensor.outdoor_voc" in ids and "sun.sun" in ids
+    assert "climate.thermostat" in ids and "sensor.erv_power" in ids and "sensor.kitchen_temperature" in ids
 
 
 def test_unknown_screen_type_is_skipped_and_ids_unique():
@@ -123,3 +128,11 @@ def test_merge_twice_daily():
     assert out[0]["label"] == "Tonight" and out[0]["temperature"] is None and out[0]["templow"] == 40
     assert out[1]["temperature"] == 60 and out[1]["templow"] == 42 and out[1]["precipitation_probability"] == 30
     assert out[2]["templow"] is None
+
+
+def test_broadcast_defaults_and_overrides():
+    cfg = normalise({"broadcast": {"min_dark": 52}})
+    assert cfg["display"]["mode"] == "monitor"
+    assert cfg["broadcast"]["min_dark"] == 52 and cfg["broadcast"]["body_size"] == 33
+    assert cfg["broadcast"]["effects"] is True and cfg["broadcast"]["particle_density"] == 1.0
+    assert cfg["broadcast"]["safe_area"] == 5

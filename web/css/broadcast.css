@@ -1,0 +1,154 @@
+/*
+ * Broadcast mode: the TV feed (PC -> VGA -> modulator -> MPEG-2 -> coax -> TV).
+ * Turned on with ?display=broadcast (the kiosk's --broadcast) or display.mode:
+ * broadcast. Everything is scoped to body.broadcast, so monitor mode is untouched.
+ *
+ * Sizes are in design-canvas pixels (the layout is drawn at 1920x1080 and
+ * scaled to the output), so 33px here is 33px at 1080 and 22px at 720p.
+ * The --bc-* values come from the `broadcast:` section of config.yaml.
+ */
+body.broadcast {
+  --bc-label: 24px;            /* small labels: min 16px @720p / 24px @1080 */
+  --bc-body: 33px;             /* body text and values: min 22px / 33px */
+  --bc-line: 4px;              /* dividers, tracks, progress bars: even, >= 2px */
+  --bc-border: 2px;            /* panel edges */
+  --bc-panel-lift: 0.12;       /* panel = background + this much white */
+  --bc-inner-lift: 0.10;       /* tiles inside panels, one more step up */
+
+  --text: #ffffff;
+  --text-2: #e6e6e6;
+  --muted: #c8c8c8;            /* no secondary text dimmer than this */
+  --panel-border: rgba(255, 255, 255, 0.30);
+  --panel-inner: rgba(255, 255, 255, var(--bc-inner-lift));
+  /* small coloured text must be bright: lighter versions of the status colours */
+  --good: #4ade80; --moderate: #facc15; --usg: #fb923c; --unhealthy: #f87171; --very: #c084fc;
+  --accent-text: color-mix(in srgb, var(--accent) 55%, #ffffff);
+
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
+}
+
+/* ------------------------------------------------------------ levels */
+/* Lift and desaturate only the background layer: hue is kept, nothing in it
+   falls below the crush level, and it's static so it costs nothing per frame. */
+body.broadcast #bg { filter: url(#bc-bg); }
+body.broadcast #bg::after { background: transparent; }
+/* Light dither to break up banding in the background gradients. */
+body.broadcast #bg::before {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  opacity: var(--bc-dither, 0.02);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+}
+
+/* ------------------------------------------------------------ panels */
+/* Panels: a clear step lighter than the background, solid 2px edge, no blur. */
+body.broadcast .panel, body.broadcast .stat, body.broadcast #lower {
+  background: rgba(255, 255, 255, var(--bc-panel-lift));
+  border: var(--bc-border) solid var(--panel-border);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+body.broadcast .pill { border-width: var(--bc-border); background: rgba(255, 255, 255, 0.12); }
+body.broadcast .pill.is-active { background: rgba(255, 255, 255, 0.26); }
+body.broadcast .cam { border-width: var(--bc-border); }
+/* Elements that use the theme's darkest colour (flow circles, small chips)
+   would crush to black: mix in a neutral grey to lift them above min_dark. */
+body.broadcast :is(.node, .node-sub, .hvac-mode:not([data-mode="heat"]):not([data-mode="cool"])) {
+  background: color-mix(in srgb, var(--panel-solid) 65%, #a0a6b4 35%);
+}
+
+/* Dividers: no hairlines (they twitter at 1080i). */
+body.broadcast .metrics, body.broadcast .air-extras { border-top: var(--bc-line) solid rgba(255, 255, 255, 0.22); }
+body.broadcast .room, body.broadcast .headline, body.broadcast .task {
+  border-bottom: calc(var(--bc-line) / 2) solid rgba(255, 255, 255, 0.18);
+}
+body.broadcast .hdr-weather { border-right: var(--bc-line) solid rgba(255, 255, 255, 0.3); }
+body.broadcast .bgm { border-left: var(--bc-line) solid rgba(255, 255, 255, 0.25); }
+body.broadcast .pill-bar { height: var(--bc-line); }
+body.broadcast .chart .grid { stroke: rgba(255, 255, 255, 0.2); stroke-width: 3; }
+body.broadcast .chart .axis { stroke: rgba(255, 255, 255, 0.45); stroke-width: 4; }
+body.broadcast .spoke { stroke: rgba(255, 255, 255, 0.22); stroke-width: 8; }
+
+/* Gauges: a clearly visible empty track and a thick, bright fill. */
+body.broadcast .g-track { stroke: rgba(255, 255, 255, 0.26); stroke-width: 20; }
+body.broadcast .g-fill { stroke-width: 20; }
+body.broadcast .aqi-scale { height: 14px; }
+
+/* ------------------------------------------------------------ text */
+/* No thin weights anywhere. */
+body.broadcast .hero-temp, body.broadcast .air-aqi, body.broadcast .hvac-current { font-weight: 600; }
+body.broadcast .hero-unit { font-weight: 600; }
+
+/* Small labels: >= --bc-label, semibold or heavier (tracking kept). */
+body.broadcast :is(.panel-title, .metric-label, .stat-label, .node-label, .brand-sub, .g-level,
+  .task-list-name, .cal-rel, .news-badge, .cam-badge, .alert-tag, .ticker-tag, .hvac-mode,
+  .legend, .pill, .pill-next, .fc-precip, .headline-time, .task-due, .task-more, .task-count,
+  .air-note, .rooms-humidity, .news-sources, .otd-date, .cal-time, .cal-date, .cal-meta,
+  .node-sub, .g-unit, .g-name, .stat-unit, .node-unit, .tile-unit, .tile-name, .metric-sub,
+  .hvac-extra, .state-chip, .room-hum, .equip-name, .ticker-sub, .bgm, .fc-label, .hero-hilo,
+  .conn, .sm-item .metric-sub) { font-size: var(--bc-label); font-weight: 650; }
+body.broadcast #clock-date { font-size: var(--bc-label); }
+
+/* Body text and values: >= --bc-body, medium or heavier. */
+body.broadcast :is(.headline-title, .otd-text, .cal-title, .task-title, .ticker-title, .room-name,
+  .equip-value, .hvac-target) { font-size: var(--bc-body); font-weight: 600; }
+body.broadcast :is(.erv-mode, .big-value, .room-temp, .tile-value, .fc-temp) { font-weight: 650; }
+
+/* Small coloured text: brighter and bold (colour is stored at quarter resolution). */
+body.broadcast :is(.cal-time, .task-due.today, .task-list-name, .fc-precip) { color: var(--accent-text); font-weight: 700; }
+body.broadcast .task-due.overdue { color: #fecaca; font-weight: 700; }
+body.broadcast .g-level { font-weight: 800; }
+body.broadcast .ticker-tag { color: #000; text-shadow: none; }
+body.broadcast .ticker-tag[data-kind="next"] { color: var(--text); }
+body.broadcast .news-badge { background: rgba(255, 255, 255, 0.24); }
+/* Chart ticks are inside a scaled SVG (about 0.9x), so a little larger. */
+body.broadcast .chart .tick { font-size: 27px; font-weight: 650; fill: var(--muted); }
+
+/* ------------------------------------------------------------ layout room for bigger text */
+body.broadcast .stats-row { gap: 12px; }
+body.broadcast .stat { padding: 16px 16px; }
+body.broadcast .stat-label { white-space: normal; line-height: 1.1; letter-spacing: 0.06em; }
+body.broadcast .stat-value { font-size: 40px; }
+body.broadcast .node-reading { margin-top: 0; }
+body.broadcast .node-value { font-size: 36px; }
+body.broadcast .node-label { letter-spacing: 0.08em; }
+body.broadcast .fc-icon { font-size: 60px; margin: 8px auto; }
+body.broadcast .metrics { gap: 16px; }
+body.broadcast .metric-label { letter-spacing: 0.08em; }
+body.broadcast .headline-list, body.broadcast .otd-list { flex: 1; min-height: 0; overflow: hidden; }
+body.broadcast .headline { padding: 12px 0; }
+body.broadcast .news-badge { width: 84px; }
+body.broadcast .otd-year { font-size: 44px; }
+/* Compact gauges (five or six on the Outside screen): no room for an arc at TV
+   text sizes, so show value, name and the coloured level as a tile. */
+body.broadcast .weather-air.n5 .g-svg, body.broadcast .weather-air.n6 .g-svg { display: none; }
+body.broadcast .weather-air.n5 .g-value, body.broadcast .weather-air.n6 .g-value { font-size: 36px; }
+body.broadcast .weather-air.n5 .g-readout, body.broadcast .weather-air.n6 .g-readout { margin-top: 0; }
+body.broadcast .weather-air.n5 .gauge, body.broadcast .weather-air.n6 .gauge {
+  border-left: 8px solid var(--lvl); justify-content: center; }
+body.broadcast .weather-air .g-name, body.broadcast .indoor-air .g-name { margin-top: 2px; }
+body.broadcast .weather-air .g-level, body.broadcast .indoor-air .g-level { min-height: 0; }
+body.broadcast .tiles-row .tile { padding: 12px 14px; }
+/* Energy: a smaller flow diagram and battery chart so everything fits the
+   wider TV-safe margins. */
+body.broadcast .flow-panel .flow { zoom: 0.8; }
+body.broadcast .flow-panel:has(.tile-grid) .flow { zoom: 0.72; }
+body.broadcast .soc-box { height: 120px; }
+body.broadcast .energy-side > * { min-height: 0; }
+/* Screens must fit the (smaller, TV-safe) space rather than grow past it. */
+body.broadcast :is(.screen-energy, .screen-weather, .screen-indoor, .screen-news, .screen-air) {
+  grid-template-rows: minmax(0, 1fr); }
+body.broadcast .energy-side, body.broadcast .weather-side { min-height: 0; overflow: hidden; }
+body.broadcast .chart-panel { min-height: 0; }
+/* Inside: tighter room and equipment rows. */
+body.broadcast .room { padding: 7px 0; }
+body.broadcast .equip-row { padding: 3px 0; }
+body.broadcast .rooms-panel, body.broadcast .equip-panel, body.broadcast .hvac-panel { padding-top: 22px; padding-bottom: 22px; }
+
+/* ------------------------------------------------------------ motion */
+/* Fades only: no sliding/zooming screens, no vertical movement (combing at 1080i). */
+body.broadcast .screen { transform: none !important; transition: opacity var(--fade, 0.4s) ease-in-out; }
+body.broadcast .ticker-content, body.broadcast #interrupt { animation-name: bcFade; }
+@keyframes bcFade { from { opacity: 0; } to { opacity: 1; } }
+/* Energy flow: solid lines instead of moving dots (small moving detail costs bitrate). */
+body.broadcast .flow path.flow { animation: none; stroke-dasharray: none; stroke-width: 10; }
+body.broadcast .cam.is-live .cam-badge::before, body.broadcast .int-dot { animation: none; }

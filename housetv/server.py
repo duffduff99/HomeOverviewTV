@@ -38,6 +38,16 @@ def build_app(hub: Hub, web_dir: Path, music_dir: Path, session: aiohttp.ClientS
         resp.headers["Cache-Control"] = "no-cache"
         return resp
 
+    @routes.get("/calibration")
+    async def calibration(_req: web.Request) -> web.StreamResponse:
+        resp = web.FileResponse(web_dir / "calibration.html")
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
+    @routes.get("/api/display")
+    async def display_settings(_req: web.Request) -> web.Response:
+        return web.json_response({"display": hub.cfg["display"], "broadcast": hub.cfg["broadcast"]})
+
     @routes.get("/health")
     async def health(_req: web.Request) -> web.Response:
         return web.json_response({"ok": True, "connected": hub.source.ready,

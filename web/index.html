@@ -5,10 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>House TV</title>
   <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/broadcast.css">
   <script src="/static/vendor/hls.light.min.js" defer></script>
   <script type="module" src="/static/js/app.js"></script>
 </head>
 <body>
+  <!-- Broadcast-mode level filters (values set from config by app.js).
+       out = in * slope + intercept: lifts the darks while keeping white at 1. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="bc-bg" color-interpolation-filters="sRGB">
+      <feColorMatrix id="bc-bg-sat" type="saturate" values="0.85"/>
+      <feComponentTransfer>
+        <feFuncR class="bc-bg-func" type="linear" slope="1" intercept="0"/>
+        <feFuncG class="bc-bg-func" type="linear" slope="1" intercept="0"/>
+        <feFuncB class="bc-bg-func" type="linear" slope="1" intercept="0"/>
+      </feComponentTransfer>
+    </filter>
+    <filter id="bc-global" color-interpolation-filters="sRGB">
+      <feComponentTransfer>
+        <feFuncR id="bc-global-r" type="linear" slope="1" intercept="0"/>
+        <feFuncG class="bc-global-gb" type="linear" slope="1" intercept="0"/>
+        <feFuncB class="bc-global-gb" type="linear" slope="1" intercept="0"/>
+      </feComponentTransfer>
+    </filter>
+  </svg>
   <div id="stage">
     <div id="bg"></div>
     <canvas id="particles" width="1920" height="1080"></canvas>

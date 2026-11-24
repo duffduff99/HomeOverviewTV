@@ -166,6 +166,7 @@ class MqttBridge:
                 if data.get("camera") in (None, "", "none", "off"):
                     hub.clear_interrupt()
                 else:
-                    hub.show_camera(data.get("camera"), data.get("title"), data.get("duration", 30))
+                    hub.show_camera(data.get("camera"), data.get("title"), data.get("duration", 30),
+                                    data.get("position"))
         except (ValueError, TypeError) as err:
             log.warning("Ignoring bad MQTT command on %s: %r (%s)", topic, payload, err)

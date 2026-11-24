@@ -43,8 +43,10 @@
   // ?after=N: switch to the channel after N seconds, inside the browser (no restart,
   // no video mode change), so a modulator that auto-calibrates when it locks on to
   // the signal calibrates on this pattern and isn't disturbed afterwards.
-  const after = Number(new URLSearchParams(location.search).get("after"));
-  if (after > 0) setTimeout(() => location.replace("/"), after * 1000);
+  const params = new URLSearchParams(location.search);
+  const after = Number(params.get("after"));
+  const back = params.get("display") ? `/?display=${encodeURIComponent(params.get("display"))}` : "/";
+  if (after > 0) setTimeout(() => location.replace(back), after * 1000);
 </script>
 </body>
 </html>

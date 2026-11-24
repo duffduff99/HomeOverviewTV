@@ -12,13 +12,15 @@ import json
 import logging
 import time
 import uuid
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Callable
+from zoneinfo import ZoneInfo
 
+import aiohttp
 from aiohttp import web
 
-from . import conditions, forecast
+from . import conditions, forecast, news
 from .config import load, watched_entities
 from .music import MusicLibrary
 from .themes import Themes
@@ -40,7 +42,10 @@ class Hub:
         self.watched = watched_entities(self.cfg)
         self.states: dict[str, dict] = {}
         self.clients: set[web.WebSocketResponse] = set()
-        self.data: dict[str, Any] = {"forecast": {}, "calendar": {}, "todo": {}, "energy": None, "history": {}}
+        self.data: dict[str, Any] = {"forecast": {}, "calendar": {}, "todo": {}, "news": {},
+                                     "energy": None, "history": {}}
+        self._http: aiohttp.ClientSession | None = None  # for internet content (news)
+        self.next_screen_id: str | None = None
         # Changes every time the server starts, so displays reload new page code after an update.
         self.version = uuid.uuid4().hex
         self._last_refresh: dict[str, float] = {}
@@ -129,6 +134,7 @@ class Hub:
             "name": self.cfg["name"],
             "subtitle": self.cfg["subtitle"],
             "display": self.cfg["display"],
+            "broadcast": self.cfg["broadcast"],
             "header": self.cfg["header"],
             "screens": screens,
             "now_playing": self.cfg["now_playing"],
@@ -143,7 +149,7 @@ class Hub:
                 "tracks": self.music.tracks}
 
     def screen_payload(self) -> dict:
-        return {"id": self.screen["id"] if self.screen else None,
+        return {"id": self.screen["id"] if self.screen else None, "next": self.next_screen_id,
                 "duration": self._duration(self.screen) if self.screen else 0,
                 "remaining": max(0.0, self.screen_until - time.time())}
 
@@ -240,23 +246,31 @@ class Hub:
                 await self._wait(5)
                 continue
             eligible = self._eligible() or screens[:1]
+            current_id = self.screen["id"] if self.screen else None
             nxt = None
             if self._goto:
                 nxt = next((s for s in screens if s["id"] == self._goto), None)
                 self._goto = None
             if nxt is None:
-                current_id = self.screen["id"] if self.screen else None
-                ids = [s["id"] for s in screens]
-                start = ids.index(current_id) + 1 if current_id in ids else 0
-                ordered = screens[start:] + screens[:start]
-                eligible_ids = {s["id"] for s in eligible}
-                nxt = next((s for s in ordered if s["id"] in eligible_ids), eligible[0])
+                nxt = self._following(current_id, eligible)
             self.screen = nxt
+            # What comes after this one, as things stand now (for "Next:" in the header).
+            following = self._following(nxt["id"], eligible)
+            self.next_screen_id = following["id"] if following and following["id"] != nxt["id"] else None
             dur = self._duration(nxt)
             self.screen_until = time.time() + dur
             await self.broadcast({"type": "screen", "screen": self.screen_payload()})
             self._notify("screen")
             await self._wait(dur)
+
+    def _following(self, current_id: str | None, eligible: list[dict]) -> dict:
+        """The next eligible screen after current_id, in configured order."""
+        screens = self.cfg["screens"]
+        ids = [s["id"] for s in screens]
+        start = ids.index(current_id) + 1 if current_id in ids else 0
+        ordered = screens[start:] + screens[:start]
+        eligible_ids = {s["id"] for s in eligible}
+        return next((s for s in ordered if s["id"] in eligible_ids), eligible[0])
 
     async def _wait(self, seconds: float) -> None:
         self._wake.clear()
@@ -284,7 +298,8 @@ class Hub:
             if item["entity"] != entity_id:
                 continue
             if self._interrupt_fires(item, new, old):
-                self.show_camera(item.get("camera"), item.get("title"), item.get("duration", 30))
+                self.show_camera(item.get("camera"), item.get("title"), item.get("duration", 30),
+                                 item.get("position"))
 
     def _interrupt_fires(self, item: dict, new: dict, old: dict | None) -> bool:
         new_state = new.get("state")
@@ -301,14 +316,15 @@ class Hub:
             fired = new_state == target and old_state != target
         return fired and conditions.check_all(item.get("when"), self.states)
 
-    def show_camera(self, camera: str | None, title: str | None = None, duration: float = 30) -> None:
+    def show_camera(self, camera: str | None, title: str | None = None, duration: float = 30,
+                    position: Any = None) -> None:
         duration = max(5, min(600, float(duration or 30)))
         if not camera:
             log.warning("show_camera called without a camera entity")
             return
         name = (self.states.get(camera, {}).get("attributes", {}) or {}).get("friendly_name", camera)
         self.interrupt = {"camera": camera, "title": title or name, "duration": duration,
-                          "until": time.time() + duration}
+                          "until": time.time() + duration, "position": position}
         self._fire({"type": "interrupt", "interrupt": self.interrupt})
         if self._interrupt_task:
             self._interrupt_task.cancel()
@@ -421,6 +437,9 @@ class Hub:
                 tasks = await self.source.todo(todo_ids)
                 self.data["todo"][key] = tasks
                 await self.broadcast({"type": "data", "key": "todo", "id": key, "value": tasks})
+        elif s["type"] == "news" and now - last.get(key, 0) > 900:
+            last[key] = now
+            await self._refresh_news(s)
         elif s["type"] == "energy" and now - last.get(key, 0) > 240:
             last[key] = now
             if s.get("use_energy_dashboard", True):
@@ -432,6 +451,32 @@ class Hub:
                 hist = await self.source.history(soc)
                 self.data["history"][soc] = hist
                 await self.broadcast({"type": "data", "key": "history", "id": soc, "value": hist})
+
+    async def _refresh_news(self, s: dict) -> None:
+        key = s["id"]
+        tz = ZoneInfo(self.source.timezone) if self.source.timezone else None
+        today = datetime.now(tz).date()
+        if self.source.demo:
+            payload = {"headlines": news.demo_headlines(int(s["max_headlines"])),
+                       "on_this_day": news.DEMO_ON_THIS_DAY[: int(s["on_this_day_count"])]
+                       if s.get("on_this_day") else [], "date": today.isoformat()}
+        else:
+            if self._http is None:
+                self._http = aiohttp.ClientSession()
+            payload = dict(self.data["news"].get(key) or {})
+            headlines = await news.fetch_headlines(self._http, s["feeds"], int(s["max_headlines"]),
+                                                   float(s["max_age_hours"]))
+            if headlines or "headlines" not in payload:  # keep the last good set if every feed failed
+                payload["headlines"] = headlines
+            if s.get("on_this_day") and payload.get("date") != today.isoformat():
+                try:
+                    payload["on_this_day"] = await news.fetch_on_this_day(
+                        self._http, today, int(s["on_this_day_count"]), s.get("language", "en"))
+                    payload["date"] = today.isoformat()
+                except Exception as err:  # noqa: BLE001
+                    log.warning("On this day failed: %s", err)
+        self.data["news"][key] = payload
+        await self.broadcast({"type": "data", "key": "news", "id": key, "value": payload})
 
     async def _housekeeping_loop(self) -> None:
         tick = 0

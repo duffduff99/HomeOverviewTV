@@ -4,13 +4,17 @@ A "house channel" for your TVs, like the ship channel on a cruise. A Raspberry
 Pi plugs into HDMI (or a QAM modulator) and rotates through screens of live
 Home Assistant data:
 
-- **Outside:** current conditions, forecast, sunrise/sunset, moon phase, and air quality gauges
-  (e.g. PM2.5 and VOC from a local monitor)
+- **Outside:** current conditions, forecast, sunrise/sunset, moon phase, and up to six outdoor
+  air quality gauges (PM2.5, PM10, VOC, NOx, CO₂… from a local monitor)
+- **Inside:** thermostat mode, setpoint and what it's doing; room temperatures and humidity; ERV
+  mode, running and boost; indoor air quality; optional duct temperatures and equipment power
 - **Energy:** live solar / battery / grid / home power flow, plus today's totals and hourly
   chart read straight from your **Home Assistant Energy dashboard**
 - **Air quality** (optional, more detail): up to six gauges for PM2.5 / PM10 / PM1 / PM0.3 / VOC / NOx / CO₂
 - **Cameras:** up to four live feeds
 - **Coming Up** (optional): calendar events by day, and to-do lists from Home Assistant
+- **Headlines** (optional): top stories from AP, NPR and BBC (or feeds you choose), with
+  Wikipedia's "On this day"
 - A free-form **tiles** screen for anything else
 
 It also has an always-on header (clock, weather), a lower third with **what's playing** on chosen
@@ -179,6 +183,51 @@ sudo ./kiosk/install-kiosk.sh --audio analog
 Run the script again with different options to change them, then reboot. If two screens are
 plugged in, unplug the one you don't use.
 
+### Broadcast mode (TVs fed through a modulator)
+
+A picture that looks right on a monitor comes out darker, softer and less detailed after VGA →
+modulator → MPEG-2 → coax → TV. Broadcast mode is a separate look for that path; any other
+display (a laptop, a monitor) keeps the normal look.
+
+```bash
+sudo ./kiosk/install-kiosk.sh --broadcast --audio analog --resolution 1920x1080
+```
+
+(Or open `http://<server>:8080/?display=broadcast` in any browser to preview it.) What it changes:
+
+- **Levels:** the background is lifted so nothing in it is darker than `broadcast.min_dark`
+  (keeping its hue), slightly desaturated and lightly dithered against banding. Panels are a clear
+  step lighter than the background, with solid 2px edges. Optional `global_lift` and `red_gain`
+  apply to the whole picture.
+- **Text:** at least 24px labels and 33px body text (1080 layout; 16/22px at 720p), no thin
+  weights, white primary text and light-grey secondary text, a subtle dark outline, brighter
+  small coloured text.
+- **Lines:** no 1px hairlines; dividers, tracks and progress bars are 2-4px, even heights (for
+  1080i).
+- **Motion:** crossfades only (no sliding), seasonal particles as on a monitor (if they
+  ever look blocky on the TV, `particle_density`, `particle_size` and `particle_speed` can make them
+  fewer, larger and slower; `effects: false` turns them off), and
+  the energy flow lines are solid instead of animated.
+- **Safe area:** 5% margins; the layout reflows to fit (e.g. headlines show as many as fit, and
+  six air-quality readings become tiles).
+
+The layout is drawn on a 1920x1080 canvas and rendered natively at the kiosk's output
+resolution, so the same settings work at 720p and 1080; sizes in `broadcast:` are for the 1080
+layout.
+
+**Tuning:** show the calibration chart on the TV, then adjust `broadcast:` in `config.yaml`
+(changes apply on save):
+
+```bash
+sudo ./kiosk/test-pattern.sh calibration
+```
+
+- Near-black row: set `min_dark` just above the first patch that looks different from 0.
+- Near-white row: if 245-255 merge, whites are clipping; if all look grey, raise `global_lift`
+  carefully or look at the modulator's calibration.
+- Text row: labels and body text should be readable from 8-10 feet on the background and on a panel.
+- Interlace row: lines that flicker or dim at 1080i are too thin; keep `line_width` above them.
+
 ### Calibrating a modulator (test patterns)
 
 `kiosk/test-pattern.sh` shows a test pattern instead of the channel, at the kiosk's resolution:
@@ -200,6 +249,37 @@ the channel comes back by itself, without a restart or video-mode change that co
 another calibration. For anything left over, adjust `display.brightness`, `contrast` and
 `saturation` in `config.yaml`; changes apply as soon as you save.
 
+**Reading the patterns on the TV:**
+- `ramp`: all 11 gray steps should be distinct. If the darkest few merge into black *and* the
+  brightest few merge into white, the modulator is treating the PC's full-range signal as video
+  levels: set `display.levels: limited`.
+- If dark steps merge but whites look dull rather than clipped, the modulator's black level or
+  gain is off. Recalibrate on white first; then raise `display.brightness` a little (e.g. 1.1) and,
+  if blacks are still crushed, lower `display.contrast` slightly (e.g. 0.92).
+- `display.high_contrast: true` makes the panels, borders and grey text brighter, which helps
+  dark-on-dark boxes survive the trip through a modulator.
+
+## Network access (domains to allow)
+
+If your network filters outbound traffic, these are the hosts House TV needs. The **TV's browser
+only talks to the House TV server** on your network; everything from the internet is fetched by
+the server.
+
+| Who | Host | Why |
+|---|---|---|
+| Server | your Home Assistant and MQTT broker | data and controls (local network) |
+| Server | `news.google.com` | AP headlines (AP has no official RSS feed; this is Google News limited to apnews.com) |
+| Server | `feeds.npr.org` | NPR headlines |
+| Server | `feeds.bbci.co.uk` | BBC headlines |
+| Server | `en.wikipedia.org` | "On this day" |
+| Install / updates | `github.com`, `ghcr.io`, `pkg-containers.githubusercontent.com` | the code and the published image |
+| Install / updates | `pypi.org`, `files.pythonhosted.org` | Python packages, only if you build the image yourself (`build: .`) |
+| Install / updates | your OS package mirrors, `dl.google.com` (Ubuntu only: Google Chrome) | kiosk install and its updates |
+| Install / updates | `get.docker.com`, `download.docker.com` | installing Docker |
+
+The headline and "On this day" hosts are only needed if you use the Headlines screen. If you
+change `feeds:`, allow those feeds' hosts instead.
+
 ## Configuration
 
 Everything is in [`config/config.example.yaml`](config/config.example.yaml), with comments. The
@@ -214,9 +294,16 @@ highlights:
   Use `battery_invert` / `grid_invert` if your sensors use the opposite sign convention.
 - **Air quality:** `air_gauges:` on the Outside screen (up to 4), or a separate `type: air` screen with up to 6 gauges. `kind:` (pm25, pm10, pm1, pm03, voc,
   nox, co2) picks the scale and health bands, and the band name is printed under each gauge.
+- **Camera cropping:** camera tiles are cropped to fill their space. `position: top` (on the
+  screen or per camera; also `center`, `bottom`, or a number such as `20` = 20% from the top)
+  chooses which part to keep; `fit: contain` shows the whole picture with black bars. Pop-ups use
+  the same setting, or their own `position:`.
 - **Cameras:** for best results, point at your cameras' **sub-streams**. With the Generic Camera
   integration, add a second camera entity in HA whose stream URL is the sub-stream.
 - **Transitions:** `display.transition_seconds` sets the crossfade length.
+- **Header tabs:** `display.tabs: auto` (default) shows a tab per screen when they fit, and
+  switches to just the current screen plus "Next: …" when they don't. Also `all`, `compact` or
+  `hidden`.
 - **Now playing:** list media players and/or text sensors under `now_playing.media_players`. A text
   sensor with `title`/`artist` attributes is shown as title and artist automatically; otherwise
   `split: " - "` splits "Artist - Title". `show_up_next: false` hides the "Up Next" filler, and

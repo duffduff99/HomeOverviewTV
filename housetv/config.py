@@ -17,8 +17,9 @@ import yaml
 
 log = logging.getLogger(__name__)
 
-SCREEN_TYPES = {"weather", "energy", "cameras", "calendar", "tiles", "air"}
-TYPE_ALIASES = {"agenda": "calendar", "tasks": "calendar", "todo": "calendar"}
+SCREEN_TYPES = {"weather", "energy", "cameras", "calendar", "tiles", "air", "indoor", "news"}
+TYPE_ALIASES = {"agenda": "calendar", "tasks": "calendar", "todo": "calendar", "hvac": "indoor", "inside": "indoor",
+                "headlines": "news"}
 
 DEFAULTS: dict[str, Any] = {
     "name": "Our House",
@@ -31,10 +32,34 @@ DEFAULTS: dict[str, Any] = {
         "brightness": 1.0,       # picture adjustments, 1.0 = unchanged
         "contrast": 1.0,
         "saturation": 1.0,
+        "levels": "full",        # full (PC, 0-255) or limited (video, 16-235)
+        "high_contrast": False,  # brighter panels/borders/text for TVs via a modulator
+        "tabs": "auto",          # auto, all, compact (current + next) or hidden
+        "mode": "monitor",       # monitor, or broadcast (TV feed via a modulator); a display
+                                 # can also choose with ?display=broadcast in its URL
         "time_format": "12h",    # 12h | 24h
         "locale": "en-US",
     },
     "rotation": {"default_duration": 15},
+    # Broadcast mode (TV feed through a modulator). Sizes are design-canvas px
+    # (1920x1080 layout; at 720p everything is 2/3 of this).
+    "broadcast": {
+        "min_dark": 45,          # 0-255: darkest level the background is lifted to (crush level)
+        "panel_lift": 0.12,      # how much lighter panels are than the background (0-1)
+        "background_saturation": 0.85,  # tone down big saturated background areas
+        "dither": 0.02,          # light noise over the background against banding (0 = off)
+        "global_lift": 0.0,      # 0-0.2: also lift the darks of the whole picture (costs GPU)
+        "red_gain": 1.0,         # e.g. 1.03 if whites still look slightly cyan
+        "label_size": 24,        # min small-label size
+        "body_size": 33,         # min body/value text size
+        "line_width": 4,         # dividers, tracks, progress bars (keep even)
+        "safe_area": 5,          # % margin on each side (TV overscan)
+        "transition_seconds": 0.4,
+        "effects": True,         # seasonal particles, same as on a monitor by default;
+        "particle_density": 1.0, #   multipliers if they ever need taming on the TV
+        "particle_size": 1.0,    #   (e.g. 0.5 density, 1.6 size, 0.5 speed)
+        "particle_speed": 1.0,
+    },
     "theme": {"default": "night", "schedule": []},
     "header": {"temperature": None, "weather": None},
     "screens": [],
@@ -62,6 +87,10 @@ SCREEN_DEFAULTS: dict[str, dict[str, Any]] = {
                  "max_events": 8, "max_tasks": 10},
     "tiles": {"title": "Around the House"},
     "air": {"title": "Air Quality", "gauges": []},
+    "news": {"title": "Headlines", "max_headlines": 8, "max_age_hours": 24,
+             "on_this_day": True, "on_this_day_count": 3, "language": "en"},
+    "indoor": {"title": "Inside", "rooms": [], "erv": {}, "air_gauges": [],
+               "duct_temps": [], "equipment_power": []},
 }
 
 _ENV_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
@@ -142,8 +171,17 @@ def normalise(raw: dict) -> dict:
         s["show_when"] = as_list(s.get("show_when"))
         if stype == "cameras":
             s["cameras"] = normalise_entity_list(s.get("cameras"))[:4]
-        if stype == "weather":
-            s["air_gauges"] = normalise_entity_list(s.get("air_gauges"))[:4]
+        if stype in ("weather", "indoor"):
+            s["air_gauges"] = normalise_entity_list(s.get("air_gauges"))[:6]
+        if stype == "news":
+            from .news import DEFAULT_FEEDS
+            feeds = [f for f in as_list(s.get("feeds")) if isinstance(f, dict) and f.get("url")]
+            s["feeds"] = feeds or [dict(f) for f in DEFAULT_FEEDS]
+        if stype == "indoor":
+            s["rooms"] = [r for r in as_list(s.get("rooms")) if isinstance(r, dict) and r.get("temperature")]
+            s["erv"] = s.get("erv") if isinstance(s.get("erv"), dict) else {}
+            s["duct_temps"] = normalise_entity_list(s.get("duct_temps"))
+            s["equipment_power"] = normalise_entity_list(s.get("equipment_power"))
         if stype == "air":
             s["gauges"] = normalise_entity_list(s.get("gauges"))[:6]
         if stype == "calendar":
@@ -191,13 +229,19 @@ def watched_entities(cfg: dict) -> set[str]:
             if isinstance(cond, dict):
                 add(cond.get("entity"))
     for s in cfg["screens"]:
-        for t in s["tiles"] + s.get("gauges", []) + s.get("air_gauges", []) + s.get("todo_lists", []):
+        for t in (s["tiles"] + s.get("gauges", []) + s.get("air_gauges", []) + s.get("todo_lists", [])
+                  + s.get("duct_temps", []) + s.get("equipment_power", [])):
             add(t["entity"])
+        for room in s.get("rooms", []):
+            add(room.get("temperature"))
+            add(room.get("humidity"))
+        for key in ("mode", "status", "boost"):
+            add((s.get("erv") or {}).get(key))
         for cond in s["show_when"]:
             if isinstance(cond, dict):
                 add(cond.get("entity"))
         for key in ("weather", "temperature", "humidity", "air_quality", "wind",
-                    "feels_like", "uv", "pressure", "rain", "pm25"):
+                    "feels_like", "uv", "pressure", "rain", "pm25", "climate"):
             add(s.get(key))
         for val in (s.get("power") or {}).values():
             add(val)

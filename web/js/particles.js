@@ -18,8 +18,18 @@ export class Particles {
     this._frame = this._frame.bind(this);
   }
 
-  set(kind, enabled = true) {
-    const spec = enabled && KINDS[kind];
+  /** opts (broadcast mode): density, size and speed multipliers, e.g. fewer,
+   *  larger and slower particles so they survive MPEG-2 encoding. */
+  set(kind, enabled = true, { density = 1, size = 1, speed = 1 } = {}) {
+    const base = enabled && KINDS[kind];
+    const spec = base && {
+      ...base,
+      count: Math.max(1, Math.round(base.count * density)),
+      size: base.size.map((v) => v * size),
+      vx: base.vx.map((v) => v * speed),
+      vy: base.vy.map((v) => v * speed),
+    };
+    this.spec = spec || null;
     this.kind = spec ? kind : null;
     this.items = spec ? Array.from({ length: spec.count }, () => this._spawn(spec, true)) : [];
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -42,7 +52,7 @@ export class Particles {
     if (t - this.last < 33) return; // ~30 fps is plenty and kind to small CPUs
     const dt = Math.min(3, (t - this.last) / 16.7);
     this.last = t;
-    const spec = KINDS[this.kind];
+    const spec = this.spec;
     const { width, height } = this.canvas;
     const ctx = this.ctx;
     ctx.clearRect(0, 0, width, height);

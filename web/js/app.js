@@ -1,15 +1,17 @@
 import { h, icon, setIcon, weatherIcon, isNum, timeParts, fmtDate, setTimeOptions, resetFormatCache, friendly } from "./util.js";
 import { Particles } from "./particles.js";
 import { MusicPlayer } from "./music.js";
-import { CameraView } from "./camera.js";
+import { CameraView, cameraOptions } from "./camera.js";
 import * as weather from "./screens/weather.js";
 import * as energy from "./screens/energy.js";
 import * as cameras from "./screens/cameras.js";
 import * as calendar from "./screens/calendar.js";
 import * as tiles from "./screens/tiles.js";
 import * as air from "./screens/air.js";
+import * as indoor from "./screens/indoor.js";
+import * as news from "./screens/news.js";
 
-const SCREEN_TYPES = { weather, energy, cameras, calendar, tiles, air };
+const SCREEN_TYPES = { weather, energy, cameras, calendar, tiles, air, indoor, news };
 const $ = (sel) => document.querySelector(sel);
 
 const app = {
@@ -111,11 +113,73 @@ function applyTheme(theme) {
   for (const [k, v] of Object.entries(theme.colors || {})) root.style.setProperty(`--${k}`, v);
   let link = $("#theme-css");
   if (theme.css) {
-    if (!link) { link = h("link#theme-css", { rel: "stylesheet" }); link.id = "theme-css"; document.head.append(link); }
+    if (!link) { link = h("link", { rel: "stylesheet", id: "theme-css" }); document.head.append(link); }
     link.href = theme.css;
   } else if (link) link.remove();
   document.body.dataset.theme = theme.id;
-  particles.set(theme.particles, app.config?.display?.effects !== false);
+  particles.set(theme.particles, effectsOn(), particleOptions());
+}
+
+// ------------------------------------------------------------ broadcast mode
+// The TV feed (through a modulator) gets its own look; a monitor keeps the
+// normal one. A display picks with ?display=broadcast / ?display=monitor in its
+// URL; otherwise display.mode in config.yaml decides.
+const URL_MODE = new URLSearchParams(location.search).get("display");
+function fadeSeconds() {
+  const v = isBroadcast() ? (app.config.broadcast?.transition_seconds ?? 0.4) : (app.config.display?.transition_seconds ?? 1);
+  return Math.max(0, Number(v) || 0);
+}
+function isBroadcast() {
+  const mode = (URL_MODE || app.config?.display?.mode || "monitor").toLowerCase();
+  return mode === "broadcast" || mode === "tv";
+}
+function effectsOn() {
+  return isBroadcast() ? app.config?.broadcast?.effects !== false : app.config?.display?.effects !== false;
+}
+// Broadcast: particles as on a monitor unless particle_density/size/speed say otherwise.
+function particleOptions() {
+  if (!isBroadcast()) return {};
+  const bc = app.config?.broadcast || {};
+  const n = (v, d) => { const x = Number(v); return Number.isFinite(x) && x > 0 ? Math.min(x, 4) : d; };
+  return { density: n(bc.particle_density, 1), size: n(bc.particle_size, 1), speed: n(bc.particle_speed, 1) };
+}
+function applyBroadcast() {
+  const on = isBroadcast();
+  const bc = app.config.broadcast || {};
+  const body = document.body;
+  body.classList.toggle("broadcast", on);
+  if (!on) return;
+  const num = (v, d, lo, hi) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
+  // Tunable sizes and levels -> CSS custom properties.
+  body.style.setProperty("--bc-label", `${num(bc.label_size, 24, 10, 60)}px`);
+  body.style.setProperty("--bc-body", `${num(bc.body_size, 33, 14, 80)}px`);
+  const line = Math.round(num(bc.line_width, 4, 2, 12) / 2) * 2;   // keep it even (interlace)
+  body.style.setProperty("--bc-line", `${line}px`);
+  body.style.setProperty("--bc-border", `${Math.max(2, line / 2)}px`);
+  body.style.setProperty("--bc-panel-lift", num(bc.panel_lift, 0.12, 0, 0.5));
+  body.style.setProperty("--bc-inner-lift", Math.min(0.5, num(bc.panel_lift, 0.12, 0, 0.5) * 0.85));
+  body.style.setProperty("--bc-dither", num(bc.dither, 0.02, 0, 0.2));
+  // Background: lift so nothing is darker than min_dark (hue kept), and desaturate.
+  const m = num(bc.min_dark, 45, 0, 128) / 255;
+  for (const f of document.querySelectorAll(".bc-bg-func")) {
+    f.setAttribute("slope", (1 - m).toFixed(4));
+    f.setAttribute("intercept", m.toFixed(4));
+  }
+  $("#bc-bg-sat").setAttribute("values", num(bc.background_saturation, 0.85, 0, 2));
+}
+function broadcastStageFilter() {
+  // Optional lift for the whole picture, and a red boost against a cyan cast.
+  if (!isBroadcast()) return "";
+  const bc = app.config.broadcast || {};
+  const lift = Math.min(0.3, Math.max(0, Number(bc.global_lift) || 0));
+  const red = Math.min(1.3, Math.max(0.7, Number(bc.red_gain) || 1));
+  if (!lift && red === 1) return "";
+  for (const f of document.querySelectorAll(".bc-global-gb")) {
+    f.setAttribute("slope", (1 - lift).toFixed(4)); f.setAttribute("intercept", lift.toFixed(4));
+  }
+  const r = $("#bc-global-r");
+  r.setAttribute("slope", ((1 - lift) * red).toFixed(4)); r.setAttribute("intercept", lift.toFixed(4));
+  return "url(#bc-global)";
 }
 
 // --------------------------------------------------------------- screens
@@ -126,14 +190,24 @@ function buildScreens() {
   const host = $("#screens");
   host.replaceChildren();
   const display = app.config.display || {};
-  document.body.classList.toggle("no-effects", display.effects === false);
-  $("#stage").style.setProperty("--safe-x", `${(display.safe_area ?? 3) * 19.2}px`);
-  $("#stage").style.setProperty("--safe-y", `${(display.safe_area ?? 3) * 10.8}px`);
-  $("#stage").style.setProperty("--fade", `${Math.max(0, Number(display.transition_seconds ?? 1))}s`);
+  const broadcast = isBroadcast();
+  const bc = app.config.broadcast || {};
+  applyBroadcast();
+  document.body.classList.toggle("no-effects", !effectsOn());
+  document.body.classList.toggle("high-contrast", !broadcast && display.high_contrast === true);
+  const safe = broadcast ? (bc.safe_area ?? 5) : (display.safe_area ?? 3);
+  $("#stage").style.setProperty("--safe-x", `${safe * 19.2}px`);
+  $("#stage").style.setProperty("--safe-y", `${safe * 10.8}px`);
+  $("#stage").style.setProperty("--fade", `${fadeSeconds()}s`);
   // Picture adjustments, to compensate for a modulator or TV that shifts the image.
   const adj = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.min(n, 3) : 1; };
-  const [br, co, sa] = [adj(display.brightness), adj(display.contrast), adj(display.saturation)];
-  $("#stage").style.filter = br === 1 && co === 1 && sa === 1 ? "" : `brightness(${br}) contrast(${co}) saturate(${sa})`;
+  let [br, co, sa] = [adj(display.brightness), adj(display.contrast), adj(display.saturation)];
+  // levels: limited squeezes 0-255 into roughly 16-235 ("video" levels), for a
+  // modulator/TV that treats the input as video and crushes dark greys.
+  if (String(display.levels).toLowerCase() === "limited") co *= 219 / 255;
+  const adjust = br === 1 && co === 1 && sa === 1 ? "" : `brightness(${br}) contrast(${co}) saturate(${sa})`;
+  $("#stage").style.filter = [broadcastStageFilter(), adjust].filter(Boolean).join(" ");
+  if (app.theme) particles.set(app.theme.particles, effectsOn(), particleOptions());
   $("#brand-name").textContent = app.config.name;
   $("#brand-sub").textContent = app.config.subtitle;
   document.title = `${app.config.name} TV`;
@@ -154,6 +228,7 @@ function buildScreens() {
       console.error("Screen failed to build", cfg, err);
     }
   }
+  pills.append(h("span.pill-next", { id: "pill-next" }));
   if (!app.screens.size) {
     host.append(h("div.screen.is-active.empty-state", h("div.panel",
       h("h2", "No screens configured yet"), h("p", "Add screens to config.yaml - see config.example.yaml."))));
@@ -169,7 +244,7 @@ function setScreen(info) {
     if (prev) {
       prev.el.classList.remove("is-active");
       prev.pill.classList.remove("is-active");
-      const fadeMs = Math.max(0, Number(app.config.display?.transition_seconds ?? 1)) * 1000;
+      const fadeMs = fadeSeconds() * 1000;
       setTimeout(() => { if (app.current !== prev) prev.hide?.(); }, fadeMs + 100);
     }
     next.el.classList.add("is-active");
@@ -182,8 +257,32 @@ function setScreen(info) {
   void next.pill.offsetWidth;
   next.pill.style.setProperty("--dur", `${info.remaining ?? info.duration}s`);
   next.pill.classList.add("is-active");
+  const upcoming = info.next && app.screens.get(info.next);
+  $("#pill-next").textContent = upcoming ? `Next: ${upcoming.cfg.title || upcoming.cfg.type}` : "";
+  applyTabsMode();
   renderTicker();
 }
+
+// Header tabs: all of them, or (when they don't fit, or by choice) just the
+// current screen plus what's next. display.tabs: auto | all | compact | hidden
+function applyTabsMode() {
+  const pills = $("#pills");
+  const mode = String(app.config?.display?.tabs || "auto").toLowerCase();
+  pills.hidden = mode === "hidden" || mode === "none";
+  if (pills.hidden) return;
+  if (mode !== "auto") { pills.classList.toggle("compact", mode === "compact"); return; }
+  // auto: lay out all the tabs, and fall back to compact if they'd run into
+  // the house name or the clock.
+  pills.classList.remove("compact");
+  const p = pills.getBoundingClientRect();
+  const left = document.querySelector(".brand > div:last-child").getBoundingClientRect();
+  const rightEl = [$("#hdr-weather"), document.querySelector(".clock")].find((e) => e && !e.hidden);
+  const right = rightEl.getBoundingClientRect();
+  const scale = p.width / Math.max(1, pills.offsetWidth) || 1;
+  const margin = 24 * scale;
+  if (p.left < left.right + margin || p.right > right.left - margin) pills.classList.add("compact");
+}
+document.fonts?.ready.then(() => applyTabsMode());
 
 let renderQueued = false;
 function renderAll() {
@@ -334,7 +433,9 @@ function setInterrupt(info) {
   music.duck(!!info);
   if (app.current?.cfg.type === "cameras") info ? app.current.hide?.() : app.current.show?.();
   if (!info) return;
-  interruptCam = new CameraView(info.camera, info.title, { mode: "live", interval: 2 });
+  interruptCam = new CameraView(info.camera, info.title, {
+    mode: "live", interval: 2, ...cameraOptions(app.config, info.camera),
+    ...(info.position != null ? { position: info.position } : {}) });
   const remaining = Math.max(1, (info.until ? info.until * 1000 - Date.now() : info.duration * 1000) / 1000);
   const bar = h("div.int-bar");
   bar.style.animationDuration = `${remaining}s`;
