@@ -17,8 +17,8 @@ import yaml
 
 log = logging.getLogger(__name__)
 
-SCREEN_TYPES = {"weather", "energy", "cameras", "calendar", "tiles", "air"}
-TYPE_ALIASES = {"agenda": "calendar", "tasks": "calendar", "todo": "calendar"}
+SCREEN_TYPES = {"weather", "energy", "cameras", "calendar", "tiles", "air", "indoor"}
+TYPE_ALIASES = {"agenda": "calendar", "tasks": "calendar", "todo": "calendar", "hvac": "indoor", "inside": "indoor"}
 
 DEFAULTS: dict[str, Any] = {
     "name": "Our House",
@@ -31,6 +31,8 @@ DEFAULTS: dict[str, Any] = {
         "brightness": 1.0,       # picture adjustments, 1.0 = unchanged
         "contrast": 1.0,
         "saturation": 1.0,
+        "levels": "full",        # full (PC, 0-255) or limited (video, 16-235)
+        "high_contrast": False,  # brighter panels/borders/text for TVs via a modulator
         "time_format": "12h",    # 12h | 24h
         "locale": "en-US",
     },
@@ -62,6 +64,8 @@ SCREEN_DEFAULTS: dict[str, dict[str, Any]] = {
                  "max_events": 8, "max_tasks": 10},
     "tiles": {"title": "Around the House"},
     "air": {"title": "Air Quality", "gauges": []},
+    "indoor": {"title": "Inside", "rooms": [], "erv": {}, "air_gauges": [],
+               "duct_temps": [], "equipment_power": []},
 }
 
 _ENV_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
@@ -142,8 +146,13 @@ def normalise(raw: dict) -> dict:
         s["show_when"] = as_list(s.get("show_when"))
         if stype == "cameras":
             s["cameras"] = normalise_entity_list(s.get("cameras"))[:4]
-        if stype == "weather":
-            s["air_gauges"] = normalise_entity_list(s.get("air_gauges"))[:4]
+        if stype in ("weather", "indoor"):
+            s["air_gauges"] = normalise_entity_list(s.get("air_gauges"))[:6]
+        if stype == "indoor":
+            s["rooms"] = [r for r in as_list(s.get("rooms")) if isinstance(r, dict) and r.get("temperature")]
+            s["erv"] = s.get("erv") if isinstance(s.get("erv"), dict) else {}
+            s["duct_temps"] = normalise_entity_list(s.get("duct_temps"))
+            s["equipment_power"] = normalise_entity_list(s.get("equipment_power"))
         if stype == "air":
             s["gauges"] = normalise_entity_list(s.get("gauges"))[:6]
         if stype == "calendar":
@@ -191,13 +200,19 @@ def watched_entities(cfg: dict) -> set[str]:
             if isinstance(cond, dict):
                 add(cond.get("entity"))
     for s in cfg["screens"]:
-        for t in s["tiles"] + s.get("gauges", []) + s.get("air_gauges", []) + s.get("todo_lists", []):
+        for t in (s["tiles"] + s.get("gauges", []) + s.get("air_gauges", []) + s.get("todo_lists", [])
+                  + s.get("duct_temps", []) + s.get("equipment_power", [])):
             add(t["entity"])
+        for room in s.get("rooms", []):
+            add(room.get("temperature"))
+            add(room.get("humidity"))
+        for key in ("mode", "status", "boost"):
+            add((s.get("erv") or {}).get(key))
         for cond in s["show_when"]:
             if isinstance(cond, dict):
                 add(cond.get("entity"))
         for key in ("weather", "temperature", "humidity", "air_quality", "wind",
-                    "feels_like", "uv", "pressure", "rain", "pm25"):
+                    "feels_like", "uv", "pressure", "rain", "pm25", "climate"):
             add(s.get(key))
         for val in (s.get("power") or {}).values():
             add(val)

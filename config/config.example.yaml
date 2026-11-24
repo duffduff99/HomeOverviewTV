@@ -23,6 +23,8 @@ display:
   safe_area: 3            # % margin on each edge, for TVs that crop the picture
   effects: true           # seasonal particles + blurred glass panels (turn off on slow hardware)
   transition_seconds: 1   # crossfade between screens
+  high_contrast: false    # brighter boxes, borders and text: try true for TVs fed by a modulator
+  levels: full            # full (PC, 0-255) or limited (video, 16-235): see README, Calibrating
   # Picture adjustments, if the image looks off after the modulator (1.0 = unchanged).
   # Calibrate the modulator first (kiosk/test-pattern.sh); use these for what's left.
   brightness: 1.0         # e.g. 1.1 = 10% brighter
@@ -69,11 +71,15 @@ screens:
                                           # integration; for the US National Weather
                                           # Service, day and night periods are combined
     forecast_count: 5
-    # Air quality gauges (up to 4), coloured by health level with the level
+    # Air quality gauges (up to 6), coloured by health level with the level
     # name written underneath. kind: pm25, pm10, pm1, pm03, voc, nox, co2, other
-    air_gauges:
+    air_gauges:                           # up to 6
       - { entity: sensor.outdoor_pm25, kind: pm25 }
-      - { entity: sensor.outdoor_voc, kind: voc }
+      - { entity: sensor.outdoor_pm10, kind: pm10 }
+      - { entity: sensor.outdoor_pm1,  kind: pm1 }
+      - { entity: sensor.outdoor_voc,  kind: voc }
+      - { entity: sensor.outdoor_nox,  kind: nox }
+      - { entity: sensor.outdoor_co2,  kind: co2 }
     # Optional extra values (shown in a small grid):
     # tiles:
     #   - { entity: sensor.rain_today, name: Rain today, icon: rain }
@@ -98,10 +104,46 @@ screens:
       - { entity: sensor.pv2_power, name: String 2, icon: panel }
       - { entity: sensor.pv3_power, name: String 3, icon: panel }
 
+  # Inside: thermostat, rooms, ERV, indoor air quality. Every part is optional.
+  - type: indoor
+    title: Inside
+    duration: 20
+    climate: climate.thermostat           # HVAC mode, setpoint, what it's doing
+    humidity: sensor.indoor_humidity      # whole-house humidity
+    rooms:
+      - { name: Living room, temperature: sensor.living_room_temperature, humidity: sensor.living_room_humidity }
+      - { name: Kitchen, temperature: sensor.kitchen_temperature }
+      - { name: Primary bedroom, temperature: sensor.primary_bedroom_temperature, humidity: sensor.primary_bedroom_humidity }
+      - { name: Office, temperature: sensor.office_temperature }
+      - { name: Basement, temperature: sensor.basement_temperature }
+    erv:
+      name: ERV
+      mode: select.erv_mode               # any entity whose state is the mode
+      status: binary_sensor.erv_running   # on/off
+      boost: switch.erv_boost             # on/off
+    air_gauges:                           # up to 6
+      - { entity: sensor.indoor_co2,  kind: co2 }
+      - { entity: sensor.indoor_voc,  kind: voc }
+      - { entity: sensor.indoor_nox,  kind: nox }
+      - { entity: sensor.indoor_pm25, kind: pm25 }
+      - { entity: sensor.indoor_pm10, kind: pm10 }
+    duct_temps:                           # optional
+      - { entity: sensor.supply_air_temperature, name: Supply air }
+      - { entity: sensor.return_air_temperature, name: Return air }
+    equipment_power:                      # optional (W or kW sensors)
+      - { entity: sensor.furnace_power, name: Furnace }
+      - { entity: sensor.heat_pump_power, name: Heat pump }
+      - { entity: sensor.erv_power, name: ERV }
+
   - type: cameras
     title: Cameras
     duration: 30
     mode: live              # live (HLS video via Home Assistant) or snapshot (refreshing stills)
+    # Which part of each picture to keep when it's cropped to fit its tile:
+    # top, center (default), bottom, or a number = % from the top (e.g. 20).
+    # Set it for the whole screen here, or per camera below. fit: contain shows
+    # the whole picture without cropping (with black bars).
+    position: top
     snapshot_interval: 3    # seconds, for snapshot mode / fallback
     cameras:                # up to 4. Tip: use your cameras' sub-streams.
       - { entity: camera.camera_1, name: Front Yard }

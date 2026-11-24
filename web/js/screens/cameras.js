@@ -4,7 +4,8 @@ import { CameraView } from "../camera.js";
 export function create(cfg, ctx) {
   const cams = (cfg.cameras || []).map((c) => new CameraView(
     c.entity, c.name || friendly(ctx.st(c.entity), c.entity),
-    { mode: cfg.mode, interval: cfg.snapshot_interval }));
+    { mode: cfg.mode, interval: cfg.snapshot_interval,
+      position: c.position ?? cfg.position, fit: c.fit ?? cfg.fit }));
   const el = h(`section.screen.screen-cameras.cams-${cams.length}`, cams.map((c) => c.el));
   return {
     el,

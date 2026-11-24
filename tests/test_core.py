@@ -16,10 +16,13 @@ def test_example_config_loads():
     cfg = load(ROOT / "config" / "config.example.yaml")
     types = [s["type"] for s in cfg["screens"]]
     assert "calendar" not in types  # disabled in the example
-    assert types[:3] == ["weather", "energy", "cameras"]
-    assert [g["kind"] for g in cfg["screens"][0]["air_gauges"]] == ["pm25", "voc"]
+    assert types[:4] == ["weather", "energy", "indoor", "cameras"]
+    assert [g["kind"] for g in cfg["screens"][0]["air_gauges"]] == ["pm25", "pm10", "pm1", "voc", "nox", "co2"]
+    indoor = cfg["screens"][2]
+    assert len(indoor["rooms"]) == 5 and indoor["erv"]["boost"] == "switch.erv_boost"
     ids = watched_entities(cfg)
     assert "sensor.pv_power" in ids and "sensor.outdoor_voc" in ids and "sun.sun" in ids
+    assert "climate.thermostat" in ids and "sensor.erv_power" in ids and "sensor.kitchen_temperature" in ids
 
 
 def test_unknown_screen_type_is_skipped_and_ids_unique():

@@ -1,18 +1,41 @@
 import { h, icon } from "./util.js";
 
+const NAMED_POSITIONS = { top: "50% 0%", center: "50% 50%", middle: "50% 50%", bottom: "50% 100%" };
+export function cameraPosition(pos) {
+  if (pos == null || pos === "") return "50% 50%";
+  if (typeof pos === "number") return `50% ${pos}%`;        // position: 20  -> 20% from the top
+  return NAMED_POSITIONS[String(pos).toLowerCase()] || String(pos);
+}
+
+/** Find a camera's display settings wherever it's configured (for pop-ups). */
+export function cameraOptions(config, entity) {
+  for (const s of config?.screens || []) {
+    if (s.type !== "cameras") continue;
+    const cam = (s.cameras || []).find((c) => c.entity === entity);
+    if (cam) return { position: cam.position ?? s.position, fit: cam.fit ?? s.fit };
+  }
+  return {};
+}
+
 /**
  * One camera tile. Shows a snapshot immediately, then switches to the live
  * HLS stream from Home Assistant when it starts playing. Falls back to
  * refreshing snapshots if live video isn't available (or mode: snapshot).
  */
 export class CameraView {
-  constructor(entity, name, { mode = "live", interval = 3 } = {}) {
+  constructor(entity, name, { mode = "live", interval = 3, position = "center", fit = "cover" } = {}) {
     this.entity = entity;
     this.mode = mode;
     this.interval = Math.max(1, Number(interval) || 3) * 1000;
     this.img = h("img.cam-media", { alt: "" });
     this.video = h("video.cam-media", { muted: true, playsinline: true, autoplay: true });
     this.video.muted = true;
+    // Which part of the picture to keep when it's cropped to fill the tile:
+    // "top", "center", "bottom", or any CSS position such as "50% 20%".
+    for (const media of [this.img, this.video]) {
+      media.style.objectPosition = cameraPosition(position);
+      media.style.objectFit = fit === "contain" ? "contain" : "cover";
+    }
     this.badge = h("span.cam-badge", "LIVE");
     this.el = h("div.cam",
       this.img, this.video,

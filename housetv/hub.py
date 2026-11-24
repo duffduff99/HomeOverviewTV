@@ -284,7 +284,8 @@ class Hub:
             if item["entity"] != entity_id:
                 continue
             if self._interrupt_fires(item, new, old):
-                self.show_camera(item.get("camera"), item.get("title"), item.get("duration", 30))
+                self.show_camera(item.get("camera"), item.get("title"), item.get("duration", 30),
+                                 item.get("position"))
 
     def _interrupt_fires(self, item: dict, new: dict, old: dict | None) -> bool:
         new_state = new.get("state")
@@ -301,14 +302,15 @@ class Hub:
             fired = new_state == target and old_state != target
         return fired and conditions.check_all(item.get("when"), self.states)
 
-    def show_camera(self, camera: str | None, title: str | None = None, duration: float = 30) -> None:
+    def show_camera(self, camera: str | None, title: str | None = None, duration: float = 30,
+                    position: Any = None) -> None:
         duration = max(5, min(600, float(duration or 30)))
         if not camera:
             log.warning("show_camera called without a camera entity")
             return
         name = (self.states.get(camera, {}).get("attributes", {}) or {}).get("friendly_name", camera)
         self.interrupt = {"camera": camera, "title": title or name, "duration": duration,
-                          "until": time.time() + duration}
+                          "until": time.time() + duration, "position": position}
         self._fire({"type": "interrupt", "interrupt": self.interrupt})
         if self._interrupt_task:
             self._interrupt_task.cancel()

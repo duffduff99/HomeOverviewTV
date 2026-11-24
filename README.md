@@ -4,8 +4,10 @@ A "house channel" for your TVs, like the ship channel on a cruise. A Raspberry
 Pi plugs into HDMI (or a QAM modulator) and rotates through screens of live
 Home Assistant data:
 
-- **Outside:** current conditions, forecast, sunrise/sunset, moon phase, and air quality gauges
-  (e.g. PM2.5 and VOC from a local monitor)
+- **Outside:** current conditions, forecast, sunrise/sunset, moon phase, and up to six outdoor
+  air quality gauges (PM2.5, PM10, VOC, NOx, CO₂… from a local monitor)
+- **Inside:** thermostat mode, setpoint and what it's doing; room temperatures and humidity; ERV
+  mode, running and boost; indoor air quality; optional duct temperatures and equipment power
 - **Energy:** live solar / battery / grid / home power flow, plus today's totals and hourly
   chart read straight from your **Home Assistant Energy dashboard**
 - **Air quality** (optional, more detail): up to six gauges for PM2.5 / PM10 / PM1 / PM0.3 / VOC / NOx / CO₂
@@ -200,6 +202,16 @@ the channel comes back by itself, without a restart or video-mode change that co
 another calibration. For anything left over, adjust `display.brightness`, `contrast` and
 `saturation` in `config.yaml`; changes apply as soon as you save.
 
+**Reading the patterns on the TV:**
+- `ramp`: all 11 gray steps should be distinct. If the darkest few merge into black *and* the
+  brightest few merge into white, the modulator is treating the PC's full-range signal as video
+  levels: set `display.levels: limited`.
+- If dark steps merge but whites look dull rather than clipped, the modulator's black level or
+  gain is off. Recalibrate on white first; then raise `display.brightness` a little (e.g. 1.1) and,
+  if blacks are still crushed, lower `display.contrast` slightly (e.g. 0.92).
+- `display.high_contrast: true` makes the panels, borders and grey text brighter, which helps
+  dark-on-dark boxes survive the trip through a modulator.
+
 ## Configuration
 
 Everything is in [`config/config.example.yaml`](config/config.example.yaml), with comments. The
@@ -214,6 +226,10 @@ highlights:
   Use `battery_invert` / `grid_invert` if your sensors use the opposite sign convention.
 - **Air quality:** `air_gauges:` on the Outside screen (up to 4), or a separate `type: air` screen with up to 6 gauges. `kind:` (pm25, pm10, pm1, pm03, voc,
   nox, co2) picks the scale and health bands, and the band name is printed under each gauge.
+- **Camera cropping:** camera tiles are cropped to fill their space. `position: top` (on the
+  screen or per camera; also `center`, `bottom`, or a number such as `20` = 20% from the top)
+  chooses which part to keep; `fit: contain` shows the whole picture with black bars. Pop-ups use
+  the same setting, or their own `position:`.
 - **Cameras:** for best results, point at your cameras' **sub-streams**. With the Generic Camera
   integration, add a second camera entity in HA whose stream URL is the sub-stream.
 - **Transitions:** `display.transition_seconds` sets the crossfade length.

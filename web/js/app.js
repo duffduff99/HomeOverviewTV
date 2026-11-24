@@ -1,15 +1,16 @@
 import { h, icon, setIcon, weatherIcon, isNum, timeParts, fmtDate, setTimeOptions, resetFormatCache, friendly } from "./util.js";
 import { Particles } from "./particles.js";
 import { MusicPlayer } from "./music.js";
-import { CameraView } from "./camera.js";
+import { CameraView, cameraOptions } from "./camera.js";
 import * as weather from "./screens/weather.js";
 import * as energy from "./screens/energy.js";
 import * as cameras from "./screens/cameras.js";
 import * as calendar from "./screens/calendar.js";
 import * as tiles from "./screens/tiles.js";
 import * as air from "./screens/air.js";
+import * as indoor from "./screens/indoor.js";
 
-const SCREEN_TYPES = { weather, energy, cameras, calendar, tiles, air };
+const SCREEN_TYPES = { weather, energy, cameras, calendar, tiles, air, indoor };
 const $ = (sel) => document.querySelector(sel);
 
 const app = {
@@ -127,12 +128,16 @@ function buildScreens() {
   host.replaceChildren();
   const display = app.config.display || {};
   document.body.classList.toggle("no-effects", display.effects === false);
+  document.body.classList.toggle("high-contrast", display.high_contrast === true);
   $("#stage").style.setProperty("--safe-x", `${(display.safe_area ?? 3) * 19.2}px`);
   $("#stage").style.setProperty("--safe-y", `${(display.safe_area ?? 3) * 10.8}px`);
   $("#stage").style.setProperty("--fade", `${Math.max(0, Number(display.transition_seconds ?? 1))}s`);
   // Picture adjustments, to compensate for a modulator or TV that shifts the image.
   const adj = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.min(n, 3) : 1; };
-  const [br, co, sa] = [adj(display.brightness), adj(display.contrast), adj(display.saturation)];
+  let [br, co, sa] = [adj(display.brightness), adj(display.contrast), adj(display.saturation)];
+  // levels: limited squeezes 0-255 into roughly 16-235 ("video" levels), for a
+  // modulator/TV that treats the input as video and crushes dark greys.
+  if (String(display.levels).toLowerCase() === "limited") co *= 219 / 255;
   $("#stage").style.filter = br === 1 && co === 1 && sa === 1 ? "" : `brightness(${br}) contrast(${co}) saturate(${sa})`;
   $("#brand-name").textContent = app.config.name;
   $("#brand-sub").textContent = app.config.subtitle;
@@ -334,7 +339,9 @@ function setInterrupt(info) {
   music.duck(!!info);
   if (app.current?.cfg.type === "cameras") info ? app.current.hide?.() : app.current.show?.();
   if (!info) return;
-  interruptCam = new CameraView(info.camera, info.title, { mode: "live", interval: 2 });
+  interruptCam = new CameraView(info.camera, info.title, {
+    mode: "live", interval: 2, ...cameraOptions(app.config, info.camera),
+    ...(info.position != null ? { position: info.position } : {}) });
   const remaining = Math.max(1, (info.until ? info.until * 1000 - Date.now() : info.duration * 1000) / 1000);
   const bar = h("div.int-bar");
   bar.style.animationDuration = `${remaining}s`;
