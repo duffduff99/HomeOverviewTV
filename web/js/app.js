@@ -9,8 +9,9 @@ import * as calendar from "./screens/calendar.js";
 import * as tiles from "./screens/tiles.js";
 import * as air from "./screens/air.js";
 import * as indoor from "./screens/indoor.js";
+import * as news from "./screens/news.js";
 
-const SCREEN_TYPES = { weather, energy, cameras, calendar, tiles, air, indoor };
+const SCREEN_TYPES = { weather, energy, cameras, calendar, tiles, air, indoor, news };
 const $ = (sel) => document.querySelector(sel);
 
 const app = {
@@ -112,7 +113,7 @@ function applyTheme(theme) {
   for (const [k, v] of Object.entries(theme.colors || {})) root.style.setProperty(`--${k}`, v);
   let link = $("#theme-css");
   if (theme.css) {
-    if (!link) { link = h("link#theme-css", { rel: "stylesheet" }); link.id = "theme-css"; document.head.append(link); }
+    if (!link) { link = h("link", { rel: "stylesheet", id: "theme-css" }); document.head.append(link); }
     link.href = theme.css;
   } else if (link) link.remove();
   document.body.dataset.theme = theme.id;
@@ -159,6 +160,7 @@ function buildScreens() {
       console.error("Screen failed to build", cfg, err);
     }
   }
+  pills.append(h("span.pill-next", { id: "pill-next" }));
   if (!app.screens.size) {
     host.append(h("div.screen.is-active.empty-state", h("div.panel",
       h("h2", "No screens configured yet"), h("p", "Add screens to config.yaml - see config.example.yaml."))));
@@ -187,8 +189,32 @@ function setScreen(info) {
   void next.pill.offsetWidth;
   next.pill.style.setProperty("--dur", `${info.remaining ?? info.duration}s`);
   next.pill.classList.add("is-active");
+  const upcoming = info.next && app.screens.get(info.next);
+  $("#pill-next").textContent = upcoming ? `Next: ${upcoming.cfg.title || upcoming.cfg.type}` : "";
+  applyTabsMode();
   renderTicker();
 }
+
+// Header tabs: all of them, or (when they don't fit, or by choice) just the
+// current screen plus what's next. display.tabs: auto | all | compact | hidden
+function applyTabsMode() {
+  const pills = $("#pills");
+  const mode = String(app.config?.display?.tabs || "auto").toLowerCase();
+  pills.hidden = mode === "hidden" || mode === "none";
+  if (pills.hidden) return;
+  if (mode !== "auto") { pills.classList.toggle("compact", mode === "compact"); return; }
+  // auto: lay out all the tabs, and fall back to compact if they'd run into
+  // the house name or the clock.
+  pills.classList.remove("compact");
+  const p = pills.getBoundingClientRect();
+  const left = document.querySelector(".brand > div:last-child").getBoundingClientRect();
+  const rightEl = [$("#hdr-weather"), document.querySelector(".clock")].find((e) => e && !e.hidden);
+  const right = rightEl.getBoundingClientRect();
+  const scale = p.width / Math.max(1, pills.offsetWidth) || 1;
+  const margin = 24 * scale;
+  if (p.left < left.right + margin || p.right > right.left - margin) pills.classList.add("compact");
+}
+document.fonts?.ready.then(() => applyTabsMode());
 
 let renderQueued = false;
 function renderAll() {

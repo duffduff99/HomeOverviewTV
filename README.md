@@ -13,6 +13,8 @@ Home Assistant data:
 - **Air quality** (optional, more detail): up to six gauges for PM2.5 / PM10 / PM1 / PM0.3 / VOC / NOx / CO₂
 - **Cameras:** up to four live feeds
 - **Coming Up** (optional): calendar events by day, and to-do lists from Home Assistant
+- **Headlines** (optional): top stories from AP, NPR and BBC (or feeds you choose), with
+  Wikipedia's "On this day"
 - A free-form **tiles** screen for anything else
 
 It also has an always-on header (clock, weather), a lower third with **what's playing** on chosen
@@ -212,6 +214,27 @@ another calibration. For anything left over, adjust `display.brightness`, `contr
 - `display.high_contrast: true` makes the panels, borders and grey text brighter, which helps
   dark-on-dark boxes survive the trip through a modulator.
 
+## Network access (domains to allow)
+
+If your network filters outbound traffic, these are the hosts House TV needs. The **TV's browser
+only talks to the House TV server** on your network; everything from the internet is fetched by
+the server.
+
+| Who | Host | Why |
+|---|---|---|
+| Server | your Home Assistant and MQTT broker | data and controls (local network) |
+| Server | `news.google.com` | AP headlines (AP has no official RSS feed; this is Google News limited to apnews.com) |
+| Server | `feeds.npr.org` | NPR headlines |
+| Server | `feeds.bbci.co.uk` | BBC headlines |
+| Server | `en.wikipedia.org` | "On this day" |
+| Install / updates | `github.com`, `ghcr.io`, `pkg-containers.githubusercontent.com` | the code and the published image |
+| Install / updates | `pypi.org`, `files.pythonhosted.org` | Python packages, only if you build the image yourself (`build: .`) |
+| Install / updates | your OS package mirrors, `dl.google.com` (Ubuntu only: Google Chrome) | kiosk install and its updates |
+| Install / updates | `get.docker.com`, `download.docker.com` | installing Docker |
+
+The headline and "On this day" hosts are only needed if you use the Headlines screen. If you
+change `feeds:`, allow those feeds' hosts instead.
+
 ## Configuration
 
 Everything is in [`config/config.example.yaml`](config/config.example.yaml), with comments. The
@@ -233,6 +256,9 @@ highlights:
 - **Cameras:** for best results, point at your cameras' **sub-streams**. With the Generic Camera
   integration, add a second camera entity in HA whose stream URL is the sub-stream.
 - **Transitions:** `display.transition_seconds` sets the crossfade length.
+- **Header tabs:** `display.tabs: auto` (default) shows a tab per screen when they fit, and
+  switches to just the current screen plus "Next: …" when they don't. Also `all`, `compact` or
+  `hidden`.
 - **Now playing:** list media players and/or text sensors under `now_playing.media_players`. A text
   sensor with `title`/`artist` attributes is shown as title and artist automatically; otherwise
   `split: " - "` splits "Artist - Title". `show_up_next: false` hides the "Up Next" filler, and

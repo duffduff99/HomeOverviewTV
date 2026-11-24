@@ -16,7 +16,9 @@ def test_example_config_loads():
     cfg = load(ROOT / "config" / "config.example.yaml")
     types = [s["type"] for s in cfg["screens"]]
     assert "calendar" not in types  # disabled in the example
-    assert types[:4] == ["weather", "energy", "indoor", "cameras"]
+    assert types[:5] == ["weather", "energy", "indoor", "news", "cameras"]
+    news_screen = cfg["screens"][3]
+    assert [f["name"] for f in news_screen["feeds"]] == ["AP", "NPR", "BBC"]  # defaults
     assert [g["kind"] for g in cfg["screens"][0]["air_gauges"]] == ["pm25", "pm10", "pm1", "voc", "nox", "co2"]
     indoor = cfg["screens"][2]
     assert len(indoor["rooms"]) == 5 and indoor["erv"]["boost"] == "switch.erv_boost"

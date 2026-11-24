@@ -25,6 +25,8 @@ display:
   transition_seconds: 1   # crossfade between screens
   high_contrast: false    # brighter boxes, borders and text: try true for TVs fed by a modulator
   levels: full            # full (PC, 0-255) or limited (video, 16-235): see README, Calibrating
+  tabs: auto              # header tabs: auto (all if they fit, else current + next),
+                          # all, compact (current + next) or hidden
   # Picture adjustments, if the image looks off after the modulator (1.0 = unchanged).
   # Calibrate the modulator first (kiosk/test-pattern.sh); use these for what's left.
   brightness: 1.0         # e.g. 1.1 = 10% brighter
@@ -134,6 +136,21 @@ screens:
       - { entity: sensor.furnace_power, name: Furnace }
       - { entity: sensor.heat_pump_power, name: Heat pump }
       - { entity: sensor.erv_power, name: ERV }
+
+  # Headlines from news feeds, plus Wikipedia's "On this day". The server
+  # fetches these, so it needs internet access to: news.google.com (AP),
+  # feeds.npr.org, feeds.bbci.co.uk and en.wikipedia.org.
+  - type: news
+    title: Headlines
+    duration: 25
+    max_headlines: 8
+    max_age_hours: 24       # skip stories older than this
+    on_this_day: true
+    on_this_day_count: 3
+    # feeds: defaults to AP, NPR and BBC. To change them, list them:
+    # feeds:
+    #   - { name: NPR, url: "https://feeds.npr.org/1001/rss.xml" }
+    #   - { name: BBC, url: "https://feeds.bbci.co.uk/news/world/us_and_canada/rss.xml" }
 
   - type: cameras
     title: Cameras

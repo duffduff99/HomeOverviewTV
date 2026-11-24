@@ -17,8 +17,9 @@ import yaml
 
 log = logging.getLogger(__name__)
 
-SCREEN_TYPES = {"weather", "energy", "cameras", "calendar", "tiles", "air", "indoor"}
-TYPE_ALIASES = {"agenda": "calendar", "tasks": "calendar", "todo": "calendar", "hvac": "indoor", "inside": "indoor"}
+SCREEN_TYPES = {"weather", "energy", "cameras", "calendar", "tiles", "air", "indoor", "news"}
+TYPE_ALIASES = {"agenda": "calendar", "tasks": "calendar", "todo": "calendar", "hvac": "indoor", "inside": "indoor",
+                "headlines": "news"}
 
 DEFAULTS: dict[str, Any] = {
     "name": "Our House",
@@ -33,6 +34,7 @@ DEFAULTS: dict[str, Any] = {
         "saturation": 1.0,
         "levels": "full",        # full (PC, 0-255) or limited (video, 16-235)
         "high_contrast": False,  # brighter panels/borders/text for TVs via a modulator
+        "tabs": "auto",          # auto, all, compact (current + next) or hidden
         "time_format": "12h",    # 12h | 24h
         "locale": "en-US",
     },
@@ -64,6 +66,8 @@ SCREEN_DEFAULTS: dict[str, dict[str, Any]] = {
                  "max_events": 8, "max_tasks": 10},
     "tiles": {"title": "Around the House"},
     "air": {"title": "Air Quality", "gauges": []},
+    "news": {"title": "Headlines", "max_headlines": 8, "max_age_hours": 24,
+             "on_this_day": True, "on_this_day_count": 3, "language": "en"},
     "indoor": {"title": "Inside", "rooms": [], "erv": {}, "air_gauges": [],
                "duct_temps": [], "equipment_power": []},
 }
@@ -148,6 +152,10 @@ def normalise(raw: dict) -> dict:
             s["cameras"] = normalise_entity_list(s.get("cameras"))[:4]
         if stype in ("weather", "indoor"):
             s["air_gauges"] = normalise_entity_list(s.get("air_gauges"))[:6]
+        if stype == "news":
+            from .news import DEFAULT_FEEDS
+            feeds = [f for f in as_list(s.get("feeds")) if isinstance(f, dict) and f.get("url")]
+            s["feeds"] = feeds or [dict(f) for f in DEFAULT_FEEDS]
         if stype == "indoor":
             s["rooms"] = [r for r in as_list(s.get("rooms")) if isinstance(r, dict) and r.get("temperature")]
             s["erv"] = s.get("erv") if isinstance(s.get("erv"), dict) else {}
