@@ -9,15 +9,19 @@
 #   --user NAME      user that runs the display (default: "kiosk", created if missing:
 #                    no password, no sudo, no docker access)
 #   --audio WHERE    hdmi (default), analog (3.5 mm / headphone jack) or default (leave as is)
-#   --output NAME    video connector to force a mode on: HDMI-A-1 (default), VGA-1, DP-1...
-#                    (list them with: ls /sys/class/drm/  -> card0-VGA-1 means VGA-1)
-#   --resolution WxH force this mode on --output, e.g. 1280x720 or 1024x768
+#   --resolution WxH use this mode instead of the screen's preferred one, e.g.
+#                    1920x1080 or 1280x720 (set when the display starts, on every
+#                    connected output unless --output is given)
 #   --force-1080p    same as --resolution 1920x1080
+#   --output NAME    only apply --resolution to this output, e.g. HDMI-A-1, DP-1, VGA-1
+#                    (the names are logged at each start: journalctl -u house-tv-kiosk)
+#   --show-cursor    keep mice/touchpads working (by default they're ignored so no
+#                    cursor appears on the TV)
 #
 # Examples:
 #   sudo ./install-kiosk.sh                                   # HDMI picture + HDMI sound
 #   sudo ./install-kiosk.sh --audio analog                    # VGA or HDMI picture, sound on the 3.5 mm jack
-#   sudo ./install-kiosk.sh --audio analog --output VGA-1 --resolution 1280x720
+#   sudo ./install-kiosk.sh --audio analog --resolution 1920x1080
 #
 # The picture goes to whichever screen is connected. With more than one
 # connected, unplug the one you don't use. The page scales to any resolution.
@@ -32,8 +36,9 @@ set -euo pipefail
 URL="http://localhost:8080"
 KIOSK_USER="kiosk"
 AUDIO=hdmi
-OUTPUT=HDMI-A-1
+OUTPUT=""
 RESOLUTION=""
+SHOW_CURSOR=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --url) URL="$2"; shift 2 ;;
@@ -42,6 +47,7 @@ while [[ $# -gt 0 ]]; do
     --output) OUTPUT="$2"; shift 2 ;;
     --resolution) RESOLUTION="$2"; shift 2 ;;
     --force-1080p) RESOLUTION=1920x1080; shift ;;
+    --show-cursor) SHOW_CURSOR=1; shift ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
@@ -62,7 +68,7 @@ fi
 
 OS_ID="$(. /etc/os-release && echo "${ID:-}")"
 apt-get update
-apt-get install -y --no-install-recommends cage fonts-noto-color-emoji alsa-utils curl ca-certificates gnupg
+apt-get install -y --no-install-recommends cage wlr-randr fonts-noto-color-emoji alsa-utils curl ca-certificates gnupg
 if [[ $OS_ID == ubuntu && $(dpkg --print-architecture) == amd64 ]]; then
   # Ubuntu's "chromium" package is only a wrapper for the snap, whose sandbox
   # doesn't suit a desktop-less kiosk. Use Google Chrome's regular .deb instead;
@@ -94,6 +100,25 @@ cat > /usr/local/bin/house-tv-kiosk <<EOF
 #!/usr/bin/env bash
 # Wait for the channel server, then open it full screen.
 URL="$URL"
+RESOLUTION="$RESOLUTION"
+OUTPUT="$OUTPUT"
+
+# Log the outputs and their modes (see them with: journalctl -u house-tv-kiosk)
+echo "Display outputs:" >&2
+wlr-randr >&2 || echo "(wlr-randr could not list outputs)" >&2
+
+# Screens report a "preferred" mode (some modulators prefer 720p). Override it if asked.
+if [ -n "\$RESOLUTION" ]; then
+  for out in \${OUTPUT:-\$(wlr-randr 2>/dev/null | awk '/^[^ \t]/ {name=\$1} /Enabled: yes/ {print name}')}; do
+    if wlr-randr --output "\$out" --mode "\$RESOLUTION" >&2 \\
+       || wlr-randr --output "\$out" --custom-mode "\$RESOLUTION" >&2; then
+      echo "Set \$out to \$RESOLUTION" >&2
+    else
+      echo "Could not set \$out to \$RESOLUTION" >&2
+    fi
+  done
+fi
+
 for i in \$(seq 1 120); do
   curl -fsS -o /dev/null "\$URL/health" && break
   sleep 2
@@ -181,7 +206,7 @@ if [[ -n "${CARD:-}" ]]; then
 fi
 
 KARGS="consoleblank=0"
-if [[ -n $RESOLUTION ]]; then
+if [[ -n $RESOLUTION && -n $OUTPUT ]]; then   # also for the boot console
   FLAG=D; [[ $OUTPUT == VGA* ]] && FLAG=e   # D = digital (HDMI/DP), e = enable (VGA)
   KARGS="$KARGS video=$OUTPUT:${RESOLUTION}@60$FLAG"
 fi
@@ -200,7 +225,28 @@ elif [[ -f /etc/default/grub ]]; then            # regular PC
   set_kargs /etc/default/grub '^GRUB_CMDLINE_LINUX_DEFAULT="'
   update-grub >/dev/null 2>&1 || true
 fi
-[[ -n $RESOLUTION ]] && echo "    Forcing $OUTPUT to ${RESOLUTION}@60"
+[[ -n $RESOLUTION ]] && echo "    Display will be set to $RESOLUTION on ${OUTPUT:-every connected output}"
+
+echo "==> Mouse cursor"
+RULE=/etc/udev/rules.d/90-house-tv-no-pointer.rules
+if [[ $SHOW_CURSOR -eq 1 ]]; then
+  echo "# House TV kiosk: pointing devices enabled (--show-cursor)" > "$RULE"
+  echo "    Mice and touchpads left enabled (--show-cursor)"
+else
+  # With no pointing device the kiosk draws no cursor. Wireless keyboard
+  # receivers often include a "mouse", so ignore every pointing device.
+  cat > "$RULE" <<'EOF'
+# House TV kiosk: ignore pointing devices so no cursor appears on the TV.
+# Re-run install-kiosk.sh with --show-cursor to use a mouse again.
+ACTION=="add|change", SUBSYSTEM=="input", ENV{ID_INPUT_MOUSE}=="1", ENV{LIBINPUT_IGNORE_DEVICE}="1"
+ACTION=="add|change", SUBSYSTEM=="input", ENV{ID_INPUT_TOUCHPAD}=="1", ENV{LIBINPUT_IGNORE_DEVICE}="1"
+ACTION=="add|change", SUBSYSTEM=="input", ENV{ID_INPUT_TABLET}=="1", ENV{LIBINPUT_IGNORE_DEVICE}="1"
+ACTION=="add|change", SUBSYSTEM=="input", ENV{ID_INPUT_POINTINGSTICK}=="1", ENV{LIBINPUT_IGNORE_DEVICE}="1"
+EOF
+  echo "    Pointing devices ignored, so no cursor is shown (--show-cursor to keep them)"
+fi
+udevadm control --reload-rules 2>/dev/null || true
+udevadm trigger --subsystem-match=input --action=change 2>/dev/null || true
 
 systemctl daemon-reload
 systemctl disable getty@tty1.service >/dev/null 2>&1 || true
