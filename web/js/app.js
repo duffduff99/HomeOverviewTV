@@ -117,7 +117,7 @@ function applyTheme(theme) {
     link.href = theme.css;
   } else if (link) link.remove();
   document.body.dataset.theme = theme.id;
-  particles.set(theme.particles, effectsOn());
+  particles.set(theme.particles, effectsOn(), particleOptions());
 }
 
 // ------------------------------------------------------------ broadcast mode
@@ -134,7 +134,14 @@ function isBroadcast() {
   return mode === "broadcast" || mode === "tv";
 }
 function effectsOn() {
-  return isBroadcast() ? app.config?.broadcast?.effects === true : app.config?.display?.effects !== false;
+  return isBroadcast() ? app.config?.broadcast?.effects !== false : app.config?.display?.effects !== false;
+}
+// Broadcast: particles as on a monitor unless particle_density/size/speed say otherwise.
+function particleOptions() {
+  if (!isBroadcast()) return {};
+  const bc = app.config?.broadcast || {};
+  const n = (v, d) => { const x = Number(v); return Number.isFinite(x) && x > 0 ? Math.min(x, 4) : d; };
+  return { density: n(bc.particle_density, 1), size: n(bc.particle_size, 1), speed: n(bc.particle_speed, 1) };
 }
 function applyBroadcast() {
   const on = isBroadcast();
@@ -200,7 +207,7 @@ function buildScreens() {
   if (String(display.levels).toLowerCase() === "limited") co *= 219 / 255;
   const adjust = br === 1 && co === 1 && sa === 1 ? "" : `brightness(${br}) contrast(${co}) saturate(${sa})`;
   $("#stage").style.filter = [broadcastStageFilter(), adjust].filter(Boolean).join(" ");
-  if (app.theme) particles.set(app.theme.particles, effectsOn());
+  if (app.theme) particles.set(app.theme.particles, effectsOn(), particleOptions());
   $("#brand-name").textContent = app.config.name;
   $("#brand-sub").textContent = app.config.subtitle;
   document.title = `${app.config.name} TV`;

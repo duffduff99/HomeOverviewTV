@@ -55,7 +55,10 @@ DEFAULTS: dict[str, Any] = {
         "line_width": 4,         # dividers, tracks, progress bars (keep even)
         "safe_area": 5,          # % margin on each side (TV overscan)
         "transition_seconds": 0.4,
-        "effects": False,        # seasonal particles (moving detail costs bitrate)
+        "effects": True,         # seasonal particles, same as on a monitor by default;
+        "particle_density": 1.0, #   multipliers if they ever need taming on the TV
+        "particle_size": 1.0,    #   (e.g. 0.5 density, 1.6 size, 0.5 speed)
+        "particle_speed": 1.0,
     },
     "theme": {"default": "night", "schedule": []},
     "header": {"temperature": None, "weather": None},

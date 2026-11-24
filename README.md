@@ -204,8 +204,10 @@ sudo ./kiosk/install-kiosk.sh --broadcast --audio analog --resolution 1920x1080
   small coloured text.
 - **Lines:** no 1px hairlines; dividers, tracks and progress bars are 2-4px, even heights (for
   1080i).
-- **Motion:** crossfades only (no sliding), no seasonal particles, and the energy flow lines are
-  solid instead of animated.
+- **Motion:** crossfades only (no sliding), seasonal particles as on a monitor (if they
+  ever look blocky on the TV, `particle_density`, `particle_size` and `particle_speed` can make them
+  fewer, larger and slower; `effects: false` turns them off), and
+  the energy flow lines are solid instead of animated.
 - **Safe area:** 5% margins; the layout reflows to fit (e.g. headlines show as many as fit, and
   six air-quality readings become tiles).
 

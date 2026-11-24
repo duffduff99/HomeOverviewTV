@@ -56,7 +56,11 @@ broadcast:
   line_width: 4               # dividers, tracks, progress bars (kept even)
   safe_area: 5                # % margin on each side for TV overscan
   transition_seconds: 0.4     # crossfade between screens
-  effects: false              # seasonal particles    # seconds per screen unless the screen sets its own
+  effects: true               # seasonal particles, same as on a monitor
+  # If particles ever look blocky or jagged on the TV, try fewer, larger and slower:
+  # particle_density: 0.5     #   share of the normal number
+  # particle_size: 1.6        #   size multiplier
+  # particle_speed: 0.5       #   speed multiplier    # seconds per screen unless the screen sets its own
 
 # Themes: night, autumn, winter, spring, summer, holiday (or your own - see README).
 # The first schedule entry whose dates include today wins; otherwise `default`.
