@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Calibration</title>
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  /* Broadcast calibration chart. Laid out on the channel's 1920x1080 canvas and
+     scaled to the output like the channel itself; the interlace lines are sized
+     in real output pixels. */
+  html, body { background: #000; cursor: none; }
+  #stage { background: #000; font-family: "Inter", system-ui, sans-serif; color: #fff; font-feature-settings: "cv11" 1; }
+  .wrap { position: absolute; inset: 40px 56px; display: flex; flex-direction: column; gap: 22px; }
+  .row { display: flex; gap: 0; }
+  .row > div { flex: 1; position: relative; }
+  h2 { font-size: 20px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #9a9a9a; margin: 0 0 8px; }
+  .ramp { height: 110px; }
+  .patches { height: 120px; gap: 8px; }
+  .patches > div { border-radius: 4px; }
+  .lbl { position: absolute; left: 0; right: 0; bottom: 8px; text-align: center; font: 700 22px Inter, sans-serif; color: #7a7a7a; }
+  .hi .lbl { color: #7a7a7a; }
+  .colors { height: 100px; gap: 8px; }
+  .text-row { display: flex; gap: 16px; height: 250px; }
+  .text-row > div { flex: 1; padding: 18px 22px; border-radius: 8px; overflow: hidden; }
+  .s-label { font-size: var(--l, 24px); font-weight: 650; letter-spacing: .14em; text-transform: uppercase; }
+  .s-body { font-size: var(--b, 33px); font-weight: 600; margin-top: 6px; }
+  .s-value { font-size: 56px; font-weight: 650; line-height: 1.1; }
+  .s-old { font-size: 16px; font-weight: 500; color: rgba(255,255,255,.5); margin-top: 6px; }
+  .lines { display: flex; gap: 40px; height: 110px; align-items: stretch; }
+  .lines > div { flex: 1; display: flex; flex-direction: column; justify-content: space-evenly; }
+  .lines span { display: block; background: #fff; }
+  .lines .cap { font-size: 20px; font-weight: 700; color: #9a9a9a; background: none; }
+</style>
+</head>
+<body>
+<div id="stage"><div class="wrap">
+  <div><h2>Gray ramp: every step should be distinct</h2><div class="row ramp" id="ramp"></div></div>
+  <div style="display:flex;gap:40px">
+    <div style="flex:1"><h2>Near black: set min_dark just above the first patch that differs from 0</h2><div class="row patches" id="blacks"></div></div>
+    <div style="flex:1"><h2>Near white: should not merge into 255</h2><div class="row patches hi" id="whites"></div></div>
+  </div>
+  <div><h2>Full and 50% colour</h2><div class="row colors" id="colors"></div></div>
+  <div><h2>Text: on black · on the lifted background (min_dark) · on a panel</h2>
+    <div class="text-row" id="text"></div></div>
+  <div><h2>Interlace: lines that flicker or dim at 1080i are too thin</h2><div class="lines" id="lines"></div></div>
+</div></div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const g = (v) => `rgb(${v},${v},${v})`;
+  const scale = () => Math.min(innerWidth / 1920, innerHeight / 1080);
+  function fit() { $("stage").style.transform = `translate(-50%, -50%) scale(${scale()})`; drawLines(); }
+
+  for (let i = 0; i < 16; i++) {
+    const v = Math.round((255 * i) / 15);
+    const ink = v < 110 ? Math.min(255, v + 110) : v - 110;   // always readable against its patch
+    $("ramp").insertAdjacentHTML("beforeend", `<div style="background:${g(v)}"><span class="lbl" style="color:${g(ink)}">${v}</span></div>`);
+  }
+  for (const v of [0, 8, 16, 24, 32, 48, 64])
+    $("blacks").insertAdjacentHTML("beforeend", `<div style="background:${g(v)}"><span class="lbl">${v}</span></div>`);
+  for (const v of [220, 230, 235, 240, 245, 250, 255])
+    $("whites").insertAdjacentHTML("beforeend", `<div style="background:${g(v)}"><span class="lbl" style="color:#555">${v}</span></div>`);
+  for (const [c, n] of [["#f00", "R"], ["#0f0", "G"], ["#00f", "B"], ["#fff", "W"], ["#800000", "50% R"], ["#008000", "50% G"], ["#000080", "50% B"], ["#808080", "50% gray"]])
+    $("colors").insertAdjacentHTML("beforeend", `<div style="background:${c}"><span class="lbl" style="color:${c === "#fff" || c === "#0f0" ? "#333" : "#ddd"}">${n}</span></div>`);
+
+  // Interlace lines: N real output pixels tall, whatever the output resolution.
+  function drawLines() {
+    const px = 1 / scale();
+    $("lines").innerHTML = [1, 2, 3, 4].map((n) =>
+      `<div><span class="cap">${n}px</span>${"<span></span>".repeat(4).replace(/<span><\/span>/g,
+        `<span style="height:${n * px}px"></span>`)}</div>`).join("");
+  }
+
+  // Text samples use the broadcast settings from config.yaml.
+  fetch("/api/display").then((r) => r.json()).catch(() => ({})).then((cfg) => {
+    const bc = cfg.broadcast || {};
+    const m = Math.round(Number(bc.min_dark ?? 45));
+    const lift = Number(bc.panel_lift ?? 0.12);
+    const card = Math.round(m + lift * (255 - m));
+    document.documentElement.style.setProperty("--l", `${bc.label_size ?? 24}px`);
+    document.documentElement.style.setProperty("--b", `${bc.body_size ?? 33}px`);
+    const sample = (bgv, name) => `<div style="background:${g(bgv)}">
+      <div class="s-label">${name} · ${bgv}</div>
+      <div class="s-value">72° 1,234 kWh</div>
+      <div class="s-body">Body text, weight 600: Kitchen 70.4°</div>
+      <div class="s-old">Monitor-size label (16px, 50% white) for comparison</div></div>`;
+    $("text").innerHTML = sample(0, "Black") + sample(m, "Background") + sample(card, "Panel");
+  });
+  addEventListener("resize", fit);
+  fit();
+</script>
+</body>
+</html>

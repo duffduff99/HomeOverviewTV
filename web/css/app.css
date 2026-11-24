@@ -415,7 +415,7 @@ body:not(.no-effects) .stat { backdrop-filter: blur(22px); -webkit-backdrop-filt
 .screen-news.no-otd { grid-template-columns: 1fr; }
 .headlines-panel, .otd-panel { padding: 28px 36px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .news-sources, .otd-date { font-size: 18px; font-weight: 650; color: var(--text-2); }
-.headline-list { margin-top: 10px; display: flex; flex-direction: column; }
+.headline-list { margin-top: 10px; display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
 .headline { display: flex; gap: 20px; align-items: flex-start; padding: 13px 0; border-bottom: 1px solid rgba(255,255,255,.08); }
 .headline:last-child { border-bottom: 0; }
 .news-badge { flex: none; width: 64px; text-align: center; margin-top: 4px; padding: 5px 0; border-radius: 8px;
@@ -423,7 +423,7 @@ body:not(.no-effects) .stat { backdrop-filter: blur(22px); -webkit-backdrop-filt
 .headline-title { font-size: 27px; font-weight: 600; line-height: 1.25;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .headline-time { font-size: 17px; color: var(--muted); margin-top: 3px; font-weight: 550; }
-.otd-list { margin-top: 18px; display: flex; flex-direction: column; gap: 26px; }
+.otd-list { margin-top: 18px; display: flex; flex-direction: column; gap: 26px; flex: 1; min-height: 0; overflow: hidden; }
 .otd { display: flex; flex-direction: column; gap: 6px; }
 .otd-year { font-size: 40px; font-weight: 750; color: var(--accent); line-height: 1; letter-spacing: -0.01em; }
 .otd-text { font-size: 24px; line-height: 1.35; color: var(--text);

@@ -128,3 +128,10 @@ def test_merge_twice_daily():
     assert out[0]["label"] == "Tonight" and out[0]["temperature"] is None and out[0]["templow"] == 40
     assert out[1]["temperature"] == 60 and out[1]["templow"] == 42 and out[1]["precipitation_probability"] == 30
     assert out[2]["templow"] is None
+
+
+def test_broadcast_defaults_and_overrides():
+    cfg = normalise({"broadcast": {"min_dark": 52}})
+    assert cfg["display"]["mode"] == "monitor"
+    assert cfg["broadcast"]["min_dark"] == 52 and cfg["broadcast"]["body_size"] == 33
+    assert cfg["broadcast"]["effects"] is False and cfg["broadcast"]["safe_area"] == 5

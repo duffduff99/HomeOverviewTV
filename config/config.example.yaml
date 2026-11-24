@@ -36,7 +36,27 @@ display:
   locale: en-US
 
 rotation:
-  default_duration: 15    # seconds per screen unless the screen sets its own
+  default_duration: 15
+
+# Broadcast mode: the look used on a TV fed through a modulator (lifted darks,
+# bigger/bolder text, no fine motion). Turn it on for the kiosk with
+#   sudo ./kiosk/install-kiosk.sh --broadcast ...
+# (or display.mode: broadcast for every display). Tune these by eye against
+# the calibration chart: sudo ./kiosk/test-pattern.sh calibration
+# Sizes are for the 1920x1080 layout; at 720p everything is 2/3 of this.
+broadcast:
+  min_dark: 45                # 0-255: background darks are lifted to at least this
+  panel_lift: 0.12            # how much lighter panels are than the background
+  background_saturation: 0.85 # tone down large saturated background areas
+  dither: 0.02                # light noise against gradient banding (0 = off)
+  global_lift: 0              # 0-0.2: also lift darks across the whole picture (more GPU)
+  red_gain: 1.0               # e.g. 1.03 if whites still look slightly cyan
+  label_size: 24              # minimum small-label size
+  body_size: 33               # minimum body/value text size
+  line_width: 4               # dividers, tracks, progress bars (kept even)
+  safe_area: 5                # % margin on each side for TV overscan
+  transition_seconds: 0.4     # crossfade between screens
+  effects: false              # seasonal particles    # seconds per screen unless the screen sets its own
 
 # Themes: night, autumn, winter, spring, summer, holiday (or your own - see README).
 # The first schedule entry whose dates include today wins; otherwise `default`.

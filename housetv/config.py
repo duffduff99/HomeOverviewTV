@@ -35,10 +35,28 @@ DEFAULTS: dict[str, Any] = {
         "levels": "full",        # full (PC, 0-255) or limited (video, 16-235)
         "high_contrast": False,  # brighter panels/borders/text for TVs via a modulator
         "tabs": "auto",          # auto, all, compact (current + next) or hidden
+        "mode": "monitor",       # monitor, or broadcast (TV feed via a modulator); a display
+                                 # can also choose with ?display=broadcast in its URL
         "time_format": "12h",    # 12h | 24h
         "locale": "en-US",
     },
     "rotation": {"default_duration": 15},
+    # Broadcast mode (TV feed through a modulator). Sizes are design-canvas px
+    # (1920x1080 layout; at 720p everything is 2/3 of this).
+    "broadcast": {
+        "min_dark": 45,          # 0-255: darkest level the background is lifted to (crush level)
+        "panel_lift": 0.12,      # how much lighter panels are than the background (0-1)
+        "background_saturation": 0.85,  # tone down big saturated background areas
+        "dither": 0.02,          # light noise over the background against banding (0 = off)
+        "global_lift": 0.0,      # 0-0.2: also lift the darks of the whole picture (costs GPU)
+        "red_gain": 1.0,         # e.g. 1.03 if whites still look slightly cyan
+        "label_size": 24,        # min small-label size
+        "body_size": 33,         # min body/value text size
+        "line_width": 4,         # dividers, tracks, progress bars (keep even)
+        "safe_area": 5,          # % margin on each side (TV overscan)
+        "transition_seconds": 0.4,
+        "effects": False,        # seasonal particles (moving detail costs bitrate)
+    },
     "theme": {"default": "night", "schedule": []},
     "header": {"temperature": None, "weather": None},
     "screens": [],

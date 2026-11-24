@@ -10,6 +10,14 @@ function ago(iso) {
   return hours < 24 ? `${hours}h ago` : `${Math.round(hours / 24)}d ago`;
 }
 
+// Show only the items that fit (bigger TV text fits fewer), rather than
+// cutting the last one off mid-line.
+function fitList(list) {
+  requestAnimationFrame(() => {
+    while (list.children.length > 1 && list.scrollHeight > list.clientHeight + 2) list.lastElementChild.remove();
+  });
+}
+
 export function create(cfg) {
   const list = h("div.headline-list");
   const events = h("div.otd-list");
@@ -37,12 +45,14 @@ export function create(cfg) {
         h("div.headline-body", h("div.headline-title", it.title),
           it.published ? h("div.headline-time", ago(it.published)) : null)))
       : [h("div.news-empty", data ? "No headlines right now" : "Loading headlines…")]));
+    fitList(list);
     if (showOtd) {
       otdDate.textContent = fmtDate(new Date(), { month: "long", day: "numeric" });
       const evs = data?.on_this_day || [];
       events.replaceChildren(...(evs.length ? evs.map((ev) =>
         h("div.otd", h("div.otd-year", String(ev.year)), h("div.otd-text", ev.text)))
         : [h("div.news-empty", data ? "Nothing for today" : "Loading…")]));
+      fitList(events);
     }
   }
   return { el, update };

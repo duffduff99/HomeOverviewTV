@@ -134,6 +134,7 @@ class Hub:
             "name": self.cfg["name"],
             "subtitle": self.cfg["subtitle"],
             "display": self.cfg["display"],
+            "broadcast": self.cfg["broadcast"],
             "header": self.cfg["header"],
             "screens": screens,
             "now_playing": self.cfg["now_playing"],

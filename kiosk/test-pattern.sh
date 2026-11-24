@@ -2,6 +2,7 @@
 # Show a calibration test pattern on the kiosk display instead of the channel,
 # keeping the kiosk's resolution setting.
 #
+#   sudo ./kiosk/test-pattern.sh calibration        # full broadcast calibration chart
 #   sudo ./kiosk/test-pattern.sh white              # also: black, gray, ramp, bars
 #   sudo ./kiosk/test-pattern.sh off                # back to the channel
 #   sudo ./kiosk/test-pattern.sh white --for 120    # white for 2 minutes, then the
@@ -35,14 +36,23 @@ if [[ ${2:-} == --for ]]; then
 fi
 
 case "$PATTERN" in
-  white|black|gray|ramp|bars)
+  white|black|gray|ramp|bars|calibration)
     # The channel's address, as given to install-kiosk.sh (--url)
     BASE="$(sed -n 's/^BASE="\(.*\)"$/\1/p' "$LAUNCHER")"
     BASE="${BASE:-http://localhost:8080}"
     QUERY=""
-    [[ -n $FOR ]] && QUERY="?after=$FOR"
+    if [[ -n $FOR ]]; then
+      QUERY="?after=$FOR"
+      # come back to the same look the kiosk uses (e.g. broadcast mode)
+      grep -q 'display=broadcast' "$LAUNCHER" && QUERY="$QUERY&display=broadcast"
+    fi
     mkdir -p "$DROPIN_DIR"
-    printf '[Service]\nEnvironment="HOUSE_TV_URL=%s/static/pattern.html%s#%s"\n' "$BASE" "$QUERY" "$PATTERN" > "$DROPIN"
+    if [[ $PATTERN == calibration ]]; then
+      TARGET="$BASE/calibration"
+    else
+      TARGET="$BASE/static/pattern.html$QUERY#$PATTERN"
+    fi
+    printf '[Service]\nEnvironment="HOUSE_TV_URL=%s"\n' "$TARGET" > "$DROPIN"
     systemctl daemon-reload
     systemctl restart house-tv-kiosk
     if [[ -n $FOR ]]; then
@@ -61,7 +71,7 @@ case "$PATTERN" in
     echo "Back to the channel."
     ;;
   *)
-    echo "Usage: sudo $0 white|black|gray|ramp|bars [--for SECONDS]" >&2
+    echo "Usage: sudo $0 calibration|white|black|gray|ramp|bars [--for SECONDS]" >&2
     echo "       sudo $0 off" >&2
     exit 1
     ;;

@@ -20,7 +20,8 @@ const hourLabel = (h, h12) => h12 ? `${h % 12 || 12}${h < 12 ? "a" : "p"}` : `${
  * series: [{label, color, values[24]}]; currentHour highlights "now".
  */
 export function hourlyBars(width, height, series, { currentHour = null, unit = "kWh", h12 = true } = {}) {
-  const pad = { l: 56, r: 12, t: 16, b: 40 };
+  const big = document.body.classList.contains("broadcast");   // larger tick labels on TV
+  const pad = { l: big ? 76 : 56, r: 12, t: 16, b: big ? 46 : 40 };
   const w = width - pad.l - pad.r;
   const hgt = height - pad.t - pad.b;
   const max = niceMax(Math.max(0.1, ...series.flatMap((x) => x.values)));
@@ -63,7 +64,8 @@ export function hourlyBars(width, height, series, { currentHour = null, unit = "
 
 /** Area chart over the day: points [[hour(0-24), value]], fixed y range. */
 export function dayArea(width, height, points, { min = 0, max = 100, color = "currentColor", unit = "%", h12 = true } = {}) {
-  const pad = { l: 72, r: 16, t: 12, b: 34 };
+  const big = document.body.classList.contains("broadcast");
+  const pad = { l: big ? 104 : 72, r: 16, t: big ? 18 : 12, b: big ? 40 : 34 };
   const w = width - pad.l - pad.r;
   const hgt = height - pad.t - pad.b;
   const x = (hr) => pad.l + (hr / 24) * w;

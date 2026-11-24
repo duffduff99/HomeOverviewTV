@@ -117,7 +117,62 @@ function applyTheme(theme) {
     link.href = theme.css;
   } else if (link) link.remove();
   document.body.dataset.theme = theme.id;
-  particles.set(theme.particles, app.config?.display?.effects !== false);
+  particles.set(theme.particles, effectsOn());
+}
+
+// ------------------------------------------------------------ broadcast mode
+// The TV feed (through a modulator) gets its own look; a monitor keeps the
+// normal one. A display picks with ?display=broadcast / ?display=monitor in its
+// URL; otherwise display.mode in config.yaml decides.
+const URL_MODE = new URLSearchParams(location.search).get("display");
+function fadeSeconds() {
+  const v = isBroadcast() ? (app.config.broadcast?.transition_seconds ?? 0.4) : (app.config.display?.transition_seconds ?? 1);
+  return Math.max(0, Number(v) || 0);
+}
+function isBroadcast() {
+  const mode = (URL_MODE || app.config?.display?.mode || "monitor").toLowerCase();
+  return mode === "broadcast" || mode === "tv";
+}
+function effectsOn() {
+  return isBroadcast() ? app.config?.broadcast?.effects === true : app.config?.display?.effects !== false;
+}
+function applyBroadcast() {
+  const on = isBroadcast();
+  const bc = app.config.broadcast || {};
+  const body = document.body;
+  body.classList.toggle("broadcast", on);
+  if (!on) return;
+  const num = (v, d, lo, hi) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
+  // Tunable sizes and levels -> CSS custom properties.
+  body.style.setProperty("--bc-label", `${num(bc.label_size, 24, 10, 60)}px`);
+  body.style.setProperty("--bc-body", `${num(bc.body_size, 33, 14, 80)}px`);
+  const line = Math.round(num(bc.line_width, 4, 2, 12) / 2) * 2;   // keep it even (interlace)
+  body.style.setProperty("--bc-line", `${line}px`);
+  body.style.setProperty("--bc-border", `${Math.max(2, line / 2)}px`);
+  body.style.setProperty("--bc-panel-lift", num(bc.panel_lift, 0.12, 0, 0.5));
+  body.style.setProperty("--bc-inner-lift", Math.min(0.5, num(bc.panel_lift, 0.12, 0, 0.5) * 0.85));
+  body.style.setProperty("--bc-dither", num(bc.dither, 0.02, 0, 0.2));
+  // Background: lift so nothing is darker than min_dark (hue kept), and desaturate.
+  const m = num(bc.min_dark, 45, 0, 128) / 255;
+  for (const f of document.querySelectorAll(".bc-bg-func")) {
+    f.setAttribute("slope", (1 - m).toFixed(4));
+    f.setAttribute("intercept", m.toFixed(4));
+  }
+  $("#bc-bg-sat").setAttribute("values", num(bc.background_saturation, 0.85, 0, 2));
+}
+function broadcastStageFilter() {
+  // Optional lift for the whole picture, and a red boost against a cyan cast.
+  if (!isBroadcast()) return "";
+  const bc = app.config.broadcast || {};
+  const lift = Math.min(0.3, Math.max(0, Number(bc.global_lift) || 0));
+  const red = Math.min(1.3, Math.max(0.7, Number(bc.red_gain) || 1));
+  if (!lift && red === 1) return "";
+  for (const f of document.querySelectorAll(".bc-global-gb")) {
+    f.setAttribute("slope", (1 - lift).toFixed(4)); f.setAttribute("intercept", lift.toFixed(4));
+  }
+  const r = $("#bc-global-r");
+  r.setAttribute("slope", ((1 - lift) * red).toFixed(4)); r.setAttribute("intercept", lift.toFixed(4));
+  return "url(#bc-global)";
 }
 
 // --------------------------------------------------------------- screens
@@ -128,18 +183,24 @@ function buildScreens() {
   const host = $("#screens");
   host.replaceChildren();
   const display = app.config.display || {};
-  document.body.classList.toggle("no-effects", display.effects === false);
-  document.body.classList.toggle("high-contrast", display.high_contrast === true);
-  $("#stage").style.setProperty("--safe-x", `${(display.safe_area ?? 3) * 19.2}px`);
-  $("#stage").style.setProperty("--safe-y", `${(display.safe_area ?? 3) * 10.8}px`);
-  $("#stage").style.setProperty("--fade", `${Math.max(0, Number(display.transition_seconds ?? 1))}s`);
+  const broadcast = isBroadcast();
+  const bc = app.config.broadcast || {};
+  applyBroadcast();
+  document.body.classList.toggle("no-effects", !effectsOn());
+  document.body.classList.toggle("high-contrast", !broadcast && display.high_contrast === true);
+  const safe = broadcast ? (bc.safe_area ?? 5) : (display.safe_area ?? 3);
+  $("#stage").style.setProperty("--safe-x", `${safe * 19.2}px`);
+  $("#stage").style.setProperty("--safe-y", `${safe * 10.8}px`);
+  $("#stage").style.setProperty("--fade", `${fadeSeconds()}s`);
   // Picture adjustments, to compensate for a modulator or TV that shifts the image.
   const adj = (v) => { const n = Number(v); return Number.isFinite(n) && n > 0 ? Math.min(n, 3) : 1; };
   let [br, co, sa] = [adj(display.brightness), adj(display.contrast), adj(display.saturation)];
   // levels: limited squeezes 0-255 into roughly 16-235 ("video" levels), for a
   // modulator/TV that treats the input as video and crushes dark greys.
   if (String(display.levels).toLowerCase() === "limited") co *= 219 / 255;
-  $("#stage").style.filter = br === 1 && co === 1 && sa === 1 ? "" : `brightness(${br}) contrast(${co}) saturate(${sa})`;
+  const adjust = br === 1 && co === 1 && sa === 1 ? "" : `brightness(${br}) contrast(${co}) saturate(${sa})`;
+  $("#stage").style.filter = [broadcastStageFilter(), adjust].filter(Boolean).join(" ");
+  if (app.theme) particles.set(app.theme.particles, effectsOn());
   $("#brand-name").textContent = app.config.name;
   $("#brand-sub").textContent = app.config.subtitle;
   document.title = `${app.config.name} TV`;
@@ -176,7 +237,7 @@ function setScreen(info) {
     if (prev) {
       prev.el.classList.remove("is-active");
       prev.pill.classList.remove("is-active");
-      const fadeMs = Math.max(0, Number(app.config.display?.transition_seconds ?? 1)) * 1000;
+      const fadeMs = fadeSeconds() * 1000;
       setTimeout(() => { if (app.current !== prev) prev.hide?.(); }, fadeMs + 100);
     }
     next.el.classList.add("is-active");

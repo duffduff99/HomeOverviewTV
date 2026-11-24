@@ -15,6 +15,8 @@
 #   --force-1080p    same as --resolution 1920x1080
 #   --output NAME    only apply --resolution to this output, e.g. HDMI-A-1, DP-1, VGA-1
 #                    (the names are logged at each start: journalctl -u house-tv-kiosk)
+#   --broadcast      use the broadcast look (for a TV fed through a modulator:
+#                    lifted darks, bigger/bolder text, no fine motion). See README.
 #   --show-cursor    keep mice/touchpads working (by default they're ignored so no
 #                    cursor appears on the TV)
 #
@@ -39,6 +41,7 @@ AUDIO=hdmi
 OUTPUT=""
 RESOLUTION=""
 SHOW_CURSOR=0
+PAGE_QUERY=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --url) URL="$2"; shift 2 ;;
@@ -48,6 +51,7 @@ while [[ $# -gt 0 ]]; do
     --resolution) RESOLUTION="$2"; shift 2 ;;
     --force-1080p) RESOLUTION=1920x1080; shift ;;
     --show-cursor) SHOW_CURSOR=1; shift ;;
+    --broadcast) PAGE_QUERY="?display=broadcast"; shift ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
@@ -101,7 +105,7 @@ cat > /usr/local/bin/house-tv-kiosk <<EOF
 # Wait for the channel server, then open it full screen.
 BASE="$URL"
 # kiosk/test-pattern.sh sets HOUSE_TV_URL to show a calibration pattern instead.
-URL="\${HOUSE_TV_URL:-\$BASE}"
+URL="\${HOUSE_TV_URL:-\$BASE/$PAGE_QUERY}"
 RESOLUTION="$RESOLUTION"
 OUTPUT="$OUTPUT"
 

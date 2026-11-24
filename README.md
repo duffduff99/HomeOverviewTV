@@ -183,6 +183,49 @@ sudo ./kiosk/install-kiosk.sh --audio analog
 Run the script again with different options to change them, then reboot. If two screens are
 plugged in, unplug the one you don't use.
 
+### Broadcast mode (TVs fed through a modulator)
+
+A picture that looks right on a monitor comes out darker, softer and less detailed after VGA →
+modulator → MPEG-2 → coax → TV. Broadcast mode is a separate look for that path; any other
+display (a laptop, a monitor) keeps the normal look.
+
+```bash
+sudo ./kiosk/install-kiosk.sh --broadcast --audio analog --resolution 1920x1080
+```
+
+(Or open `http://<server>:8080/?display=broadcast` in any browser to preview it.) What it changes:
+
+- **Levels:** the background is lifted so nothing in it is darker than `broadcast.min_dark`
+  (keeping its hue), slightly desaturated and lightly dithered against banding. Panels are a clear
+  step lighter than the background, with solid 2px edges. Optional `global_lift` and `red_gain`
+  apply to the whole picture.
+- **Text:** at least 24px labels and 33px body text (1080 layout; 16/22px at 720p), no thin
+  weights, white primary text and light-grey secondary text, a subtle dark outline, brighter
+  small coloured text.
+- **Lines:** no 1px hairlines; dividers, tracks and progress bars are 2-4px, even heights (for
+  1080i).
+- **Motion:** crossfades only (no sliding), no seasonal particles, and the energy flow lines are
+  solid instead of animated.
+- **Safe area:** 5% margins; the layout reflows to fit (e.g. headlines show as many as fit, and
+  six air-quality readings become tiles).
+
+The layout is drawn on a 1920x1080 canvas and rendered natively at the kiosk's output
+resolution, so the same settings work at 720p and 1080; sizes in `broadcast:` are for the 1080
+layout.
+
+**Tuning:** show the calibration chart on the TV, then adjust `broadcast:` in `config.yaml`
+(changes apply on save):
+
+```bash
+sudo ./kiosk/test-pattern.sh calibration
+```
+
+- Near-black row: set `min_dark` just above the first patch that looks different from 0.
+- Near-white row: if 245-255 merge, whites are clipping; if all look grey, raise `global_lift`
+  carefully or look at the modulator's calibration.
+- Text row: labels and body text should be readable from 8-10 feet on the background and on a panel.
+- Interlace row: lines that flicker or dim at 1080i are too thin; keep `line_width` above them.
+
 ### Calibrating a modulator (test patterns)
 
 `kiosk/test-pattern.sh` shows a test pattern instead of the channel, at the kiosk's resolution:
