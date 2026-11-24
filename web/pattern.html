@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Test pattern</title>
+<style>
+  /* Calibration patterns. Pick one with the URL hash: #white #black #gray #ramp #bars */
+  html, body { margin: 0; height: 100%; overflow: hidden; cursor: none; background: #000; }
+  .full { position: fixed; inset: 0; }
+  .row { display: flex; width: 100%; }
+  .row > div { flex: 1; }
+  .label { position: fixed; left: 24px; bottom: 18px; font: 600 22px system-ui, sans-serif;
+           color: #808080; mix-blend-mode: difference; }
+</style>
+</head>
+<body>
+<div id="p" class="full"></div>
+<div id="label" class="label"></div>
+<script>
+  const P = document.getElementById("p");
+  const ramp = (n) => `<div class="row" style="height:100%">${Array.from({ length: n }, (_, i) => {
+    const v = Math.round((255 * i) / (n - 1));
+    return `<div style="background:rgb(${v},${v},${v})"></div>`;
+  }).join("")}</div>`;
+  const patterns = {
+    white: () => { P.style.background = "#fff"; return "White (255)"; },
+    black: () => { P.style.background = "#000"; return "Black (0)"; },
+    gray: () => { P.style.background = "rgb(128,128,128)"; return "50% gray (128)"; },
+    ramp: () => { P.innerHTML = ramp(11); return "Gray steps 0-255: every step should be distinct"; },
+    bars: () => {
+      // 75% colour bars, plus a near-black row: 0, 4% and 8% black should be distinguishable
+      const top = ["#bfbfbf", "#bfbf00", "#00bfbf", "#00bf00", "#bf00bf", "#bf0000", "#0000bf"];
+      const low = ["#000", "#0a0a0a", "#141414", "#000", "#fff", "#000", "#000"];
+      P.innerHTML = `<div class="row" style="height:75%">${top.map((c) => `<div style="background:${c}"></div>`).join("")}</div>`
+        + `<div class="row" style="height:25%">${low.map((c) => `<div style="background:${c}"></div>`).join("")}</div>`;
+      return "75% colour bars";
+    },
+  };
+  const name = (location.hash || "#white").slice(1);
+  document.getElementById("label").textContent = (patterns[name] || patterns.white)();
+  if (name === "white" || name === "black" || name === "gray") document.getElementById("label").remove();
+  window.addEventListener("hashchange", () => location.reload());
+  // ?after=N: switch to the channel after N seconds, inside the browser (no restart,
+  // no video mode change), so a modulator that auto-calibrates when it locks on to
+  // the signal calibrates on this pattern and isn't disturbed afterwards.
+  const after = Number(new URLSearchParams(location.search).get("after"));
+  if (after > 0) setTimeout(() => location.replace("/"), after * 1000);
+</script>
+</body>
+</html>

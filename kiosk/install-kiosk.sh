@@ -99,7 +99,9 @@ echo "==> Writing launcher"
 cat > /usr/local/bin/house-tv-kiosk <<EOF
 #!/usr/bin/env bash
 # Wait for the channel server, then open it full screen.
-URL="$URL"
+BASE="$URL"
+# kiosk/test-pattern.sh sets HOUSE_TV_URL to show a calibration pattern instead.
+URL="\${HOUSE_TV_URL:-\$BASE}"
 RESOLUTION="$RESOLUTION"
 OUTPUT="$OUTPUT"
 
@@ -120,7 +122,7 @@ if [ -n "\$RESOLUTION" ]; then
 fi
 
 for i in \$(seq 1 120); do
-  curl -fsS -o /dev/null "\$URL/health" && break
+  curl -fsS -o /dev/null "\$BASE/health" && break
   sleep 2
 done
 exec "$CHROMIUM_BIN" \\

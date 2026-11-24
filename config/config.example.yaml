@@ -23,6 +23,11 @@ display:
   safe_area: 3            # % margin on each edge, for TVs that crop the picture
   effects: true           # seasonal particles + blurred glass panels (turn off on slow hardware)
   transition_seconds: 1   # crossfade between screens
+  # Picture adjustments, if the image looks off after the modulator (1.0 = unchanged).
+  # Calibrate the modulator first (kiosk/test-pattern.sh); use these for what's left.
+  brightness: 1.0         # e.g. 1.1 = 10% brighter
+  contrast: 1.0
+  saturation: 1.0         # colour intensity
   time_format: 12h        # 12h or 24h
   locale: en-US
 
