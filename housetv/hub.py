@@ -138,6 +138,7 @@ class Hub:
             "header": self.cfg["header"],
             "screens": screens,
             "now_playing": self.cfg["now_playing"],
+            "message": {k: v for k, v in self.cfg["message"].items() if k != "entity"},
             "timezone": self.source.timezone,
             "demo": self.source.demo,
         }

@@ -30,8 +30,16 @@ export class MusicPlayer {
 
   duck(on) { this.ducked = on; this._volume(); }
 
+  /** Lower the music briefly (e.g. under a message chime). */
+  duckFor(ms) {
+    this.briefDuck = true; this._volume();
+    clearTimeout(this._briefTimer);
+    this._briefTimer = setTimeout(() => { this.briefDuck = false; this._volume(); }, ms);
+  }
+
   _volume() {
-    const v = this.ducked ? Math.min(this.settings.volume, this.settings.duck_volume ?? 10) : this.settings.volume;
+    const v = this.ducked || this.briefDuck
+      ? Math.min(this.settings.volume, this.settings.duck_volume ?? 10) : this.settings.volume;
     this.audio.volume = Math.max(0, Math.min(1, (v ?? 35) / 100));
   }
 

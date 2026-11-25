@@ -1,6 +1,7 @@
 import { h, icon, setIcon, weatherIcon, isNum, timeParts, fmtDate, setTimeOptions, resetFormatCache, friendly } from "./util.js";
 import { Particles } from "./particles.js";
 import { MusicPlayer } from "./music.js";
+import { playChime } from "./chime.js";
 import { CameraView, cameraOptions } from "./camera.js";
 import * as weather from "./screens/weather.js";
 import * as energy from "./screens/energy.js";
@@ -336,7 +337,7 @@ function renderHeader() {
 }
 
 // ------------------------------------------------------- lower third ticker
-let tickerItems = [], tickerIndex = 0, tickerKey = "";
+let tickerItems = [], tickerIndex = 0, tickerKey = "", shownMessage = "", tickerReady = false;
 function buildTickerItems() {
   const items = [];
   for (const mp of app.config?.now_playing?.media_players || []) {
@@ -377,6 +378,18 @@ function renderTicker() {
     tickerKey = key;
     tickerItems = items;
     if (tickerIndex >= items.length) tickerIndex = 0;
+    // A new or changed message jumps the queue and gets a full turn on screen,
+    // instead of waiting for the bar to rotate round to it.
+    if (app.message && app.message !== shownMessage) {
+      tickerIndex = items.findIndex((it) => it.kind === "message");
+      restartTickerTimer();
+      // Chime when new text appears (not when part of a message is cleared, and
+      // not for a message that was already up when the page loaded).
+      const before = new Set(shownMessage.split(MESSAGE_SEP));
+      if (tickerReady && app.message.split(MESSAGE_SEP).some((part) => !before.has(part))) messageChime();
+    }
+    shownMessage = app.message || "";
+    tickerReady = true;
     showTickerItem();
   }
   const tr = app.track;
@@ -409,10 +422,23 @@ function showTickerItem() {
     h("div.ticker-text", h("div.ticker-title", item.title), item.sub ? h("div.ticker-sub", item.sub) : null));
   box.replaceChildren(content);
 }
-setInterval(() => {
-  if (tickerItems.length > 1) { tickerIndex = (tickerIndex + 1) % tickerItems.length; showTickerItem(); }
-  else if (!tickerItems.length) showTickerItem();
-}, 9000);
+const MESSAGE_SEP = "  •  ";   // the server joins the helper's text and the MQTT message with this
+function messageChime() {
+  const m = app.config?.message || {};
+  if (m.chime === false) return;
+  const ms = playChime({ volume: m.chime_volume ?? 60, sound: m.chime_sound || null });
+  if (ms) music.duckFor(ms + 400);
+}
+
+let tickerTimer = null;
+function restartTickerTimer() {
+  clearInterval(tickerTimer);
+  tickerTimer = setInterval(() => {
+    if (tickerItems.length > 1) { tickerIndex = (tickerIndex + 1) % tickerItems.length; showTickerItem(); }
+    else if (!tickerItems.length) showTickerItem();
+  }, 9000);
+}
+restartTickerTimer();
 
 // ----------------------------------------------------------------- alerts
 let alertKey = "";

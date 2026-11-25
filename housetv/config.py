@@ -67,7 +67,12 @@ DEFAULTS: dict[str, Any] = {
     "header": {"temperature": None, "weather": None},
     "screens": [],
     "now_playing": {"media_players": [], "show_up_next": True},
-    "message": {"entity": None},
+    "message": {
+        "entity": None,
+        "chime": True,           # play a chime when a message appears or changes
+        "chime_volume": 60,      # 0-100
+        "chime_sound": None,     # optional file in config/sounds/ instead of the built-in chime
+    },
     "alerts": [],
     "interrupts": [],
     "music": {"enabled": True, "volume": 35, "shuffle": True, "duck_volume": 10},

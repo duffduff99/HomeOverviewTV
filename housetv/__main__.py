@@ -64,7 +64,7 @@ async def run_server(args: argparse.Namespace) -> None:
         from .mqtt import MqttBridge
         asyncio.create_task(MqttBridge(hub).run())
 
-    app = build_app(hub, APP_DIR / "web", music_dir, session)
+    app = build_app(hub, APP_DIR / "web", music_dir, session, sounds_dir=config_dir / "sounds")
     runner = web.AppRunner(app, access_log=None)
     await runner.setup()
     port = int(os.environ.get("PORT", args.port))

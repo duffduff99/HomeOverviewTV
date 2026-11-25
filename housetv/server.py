@@ -29,7 +29,8 @@ def allowed_cameras(hub: Hub) -> set[str]:
     return cams
 
 
-def build_app(hub: Hub, web_dir: Path, music_dir: Path, session: aiohttp.ClientSession) -> web.Application:
+def build_app(hub: Hub, web_dir: Path, music_dir: Path, session: aiohttp.ClientSession,
+              sounds_dir: Path | None = None) -> web.Application:
     app = web.Application()
     routes = web.RouteTableDef()
     ha_url = (hub.cfg["homeassistant"].get("url") or "").rstrip("/")
@@ -133,6 +134,16 @@ def build_app(hub: Hub, web_dir: Path, music_dir: Path, session: aiohttp.ClientS
             raise web.HTTPNotFound()
         return web.FileResponse(path)
 
+    @routes.get("/sounds/{name}")
+    async def sound_file(req: web.Request) -> web.StreamResponse:
+        if sounds_dir is None:
+            raise web.HTTPNotFound()
+        root = sounds_dir.resolve()
+        path = (root / req.match_info["name"]).resolve()
+        if path.parent != root or not path.is_file():
+            raise web.HTTPNotFound()
+        return web.FileResponse(path)
+
     @routes.get("/music/{path:.*}")
     async def music_file(req: web.Request) -> web.StreamResponse:
         root = music_dir.resolve()
@@ -144,7 +155,8 @@ def build_app(hub: Hub, web_dir: Path, music_dir: Path, session: aiohttp.ClientS
     if hub.source.demo:
         @routes.get("/demo/{action}")
         async def demo_action(req: web.Request) -> web.Response:
-            """Preview helpers, demo mode only: /demo/doorbell, /demo/alert, /demo/next."""
+            """Preview helpers, demo mode only: /demo/doorbell, /demo/alert, /demo/next,
+            /demo/message?text=..., /demo/theme-<name>."""
             action = req.match_info["action"]
             if action == "doorbell":
                 hub.show_camera("camera.camera_1", "Someone's at the front door", 20)
@@ -157,6 +169,8 @@ def build_app(hub: Hub, web_dir: Path, music_dir: Path, session: aiohttp.ClientS
                 hub.update_state("binary_sensor.weather_alert", st, None)
             elif action == "next":
                 hub.next_screen()
+            elif action == "message":
+                hub.set_message(req.query.get("text", ""))
             elif action.startswith("theme-"):
                 hub.set_theme(action[6:])
             else:

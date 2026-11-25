@@ -298,6 +298,10 @@ highlights:
 - **Header tabs:** `display.tabs: auto` (default) shows a tab per screen when they fit, and
   switches to just the current screen plus "Next: …" when they don't. Also `all`, `compact` or
   `hidden`.
+- **Messages:** set `message.entity` to a text helper (e.g. `input_text.tv_message`); the message
+  shows in the bottom bar while it has text, appears straight away (ahead of the track) and plays
+  a soft chime. `message.chime: false` turns the chime off, `chime_volume` (0-100) sets its level,
+  and `chime_sound: doorbell.mp3` plays your own file from `config/sounds/` instead.
 - **Now playing:** list media players and/or text sensors under `now_playing.media_players`. A text
   sensor with `title`/`artist` attributes is shown as title and artist automatically; otherwise
   `split: " - "` splits "Artist - Title". `show_up_next: false` hides the "Up Next" filler, and
