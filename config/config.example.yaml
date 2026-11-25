@@ -256,6 +256,9 @@ now_playing:
 # from the "Message" text entity this channel adds to Home Assistant.
 message:
   entity: input_text.tv_message
+  chime: true                 # play a chime when a message appears or changes
+  chime_volume: 60            # 0-100
+  # chime_sound: doorbell.mp3 # your own sound instead: put it in config/sounds/
 
 # Alerts: a scrolling banner while any of these are active.
 #   text: fixed text, or attribute: read the text from an attribute
