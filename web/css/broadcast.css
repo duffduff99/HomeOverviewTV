@@ -8,11 +8,12 @@
  * The --bc-* values come from the `broadcast:` section of config.yaml.
  */
 body.broadcast {
-  --bc-label: 24px;            /* small labels: min 16px @720p / 24px @1080 */
-  --bc-body: 33px;             /* body text and values: min 22px / 33px */
+  --bc-label: 20px;            /* small labels (broadcast.label_size) */
+  --bc-body: 28px;             /* body text and values (broadcast.body_size) */
   --bc-line: 4px;              /* dividers, tracks, progress bars: even, >= 2px */
   --bc-border: 2px;            /* panel edges */
-  --bc-panel-lift: 0.12;       /* panel = background + this much white */
+  --bc-panel-lift: 0.12;       /* how much lighter panels are (see --bc-panel-mix) */
+  --bc-panel-mix: 30%;         /* panel = theme's panel colour mixed with this much white */
   --bc-inner-lift: 0.10;       /* tiles inside panels, one more step up */
 
   --text: #ffffff;
@@ -40,9 +41,11 @@ body.broadcast #bg::before {
 }
 
 /* ------------------------------------------------------------ panels */
-/* Panels: a clear step lighter than the background, solid 2px edge, no blur. */
+/* Panels: solid (so the background and its particles stay behind them, and
+   text sits on a calm surface that encodes cleanly), a clear step lighter than
+   the background in the theme's own hue, with a solid 2px edge and no blur. */
 body.broadcast .panel, body.broadcast .stat, body.broadcast #lower {
-  background: rgba(255, 255, 255, var(--bc-panel-lift));
+  background: color-mix(in srgb, var(--panel-solid), #ffffff var(--bc-panel-mix));
   border: var(--bc-border) solid var(--panel-border);
   backdrop-filter: none; -webkit-backdrop-filter: none;
   box-shadow: none;
@@ -78,19 +81,30 @@ body.broadcast .aqi-scale { height: 14px; }
 body.broadcast .hero-temp, body.broadcast .air-aqi, body.broadcast .hvac-current { font-weight: 600; }
 body.broadcast .hero-unit { font-weight: 600; }
 
-/* Small labels: >= --bc-label, semibold or heavier (tracking kept). */
+/* Small labels: at least --bc-label (broadcast.label_size), semibold or heavier.
+   label_size: 0 keeps the monitor sizes (body.bc-design-labels), weights still apply. */
 body.broadcast :is(.panel-title, .metric-label, .stat-label, .node-label, .brand-sub, .g-level,
   .task-list-name, .cal-rel, .news-badge, .cam-badge, .alert-tag, .ticker-tag, .hvac-mode,
   .legend, .pill, .pill-next, .fc-precip, .headline-time, .task-due, .task-more, .task-count,
   .air-note, .rooms-humidity, .news-sources, .otd-date, .cal-time, .cal-date, .cal-meta,
   .node-sub, .g-unit, .g-name, .stat-unit, .node-unit, .tile-unit, .tile-name, .metric-sub,
   .hvac-extra, .state-chip, .room-hum, .equip-name, .ticker-sub, .bgm, .fc-label, .hero-hilo,
-  .conn, .sm-item .metric-sub) { font-size: var(--bc-label); font-weight: 650; }
-body.broadcast #clock-date { font-size: var(--bc-label); }
+  .conn, .sm-item .metric-sub) { font-weight: 650; }
+body.broadcast:not(.bc-design-labels) :is(.panel-title, .metric-label, .stat-label, .node-label, .brand-sub, .g-level,
+  .task-list-name, .cal-rel, .news-badge, .cam-badge, .alert-tag, .ticker-tag, .hvac-mode,
+  .legend, .pill, .pill-next, .fc-precip, .headline-time, .task-due, .task-more, .task-count,
+  .air-note, .rooms-humidity, .news-sources, .otd-date, .cal-time, .cal-date, .cal-meta,
+  .node-sub, .g-unit, .g-name, .stat-unit, .node-unit, .tile-unit, .tile-name, .metric-sub,
+  .hvac-extra, .state-chip, .room-hum, .equip-name, .ticker-sub, .bgm, .fc-label, .hero-hilo,
+  .conn, .sm-item .metric-sub) { font-size: var(--bc-label); }
+body.broadcast:not(.bc-design-labels) #clock-date { font-size: var(--bc-label); }
 
-/* Body text and values: >= --bc-body, medium or heavier. */
+/* Body text and values: at least --bc-body (broadcast.body_size), medium or heavier.
+   body_size: 0 keeps the monitor sizes (body.bc-design-body). */
 body.broadcast :is(.headline-title, .otd-text, .cal-title, .task-title, .ticker-title, .room-name,
-  .equip-value, .hvac-target) { font-size: var(--bc-body); font-weight: 600; }
+  .equip-value, .hvac-target) { font-weight: 600; }
+body.broadcast:not(.bc-design-body) :is(.headline-title, .otd-text, .cal-title, .task-title,
+  .ticker-title, .room-name, .equip-value, .hvac-target) { font-size: var(--bc-body); }
 body.broadcast :is(.erv-mode, .big-value, .room-temp, .tile-value, .fc-temp) { font-weight: 650; }
 
 /* Small coloured text: brighter and bold (colour is stored at quarter resolution). */
@@ -145,10 +159,12 @@ body.broadcast .equip-row { padding: 3px 0; }
 body.broadcast .rooms-panel, body.broadcast .equip-panel, body.broadcast .hvac-panel { padding-top: 22px; padding-bottom: 22px; }
 
 /* ------------------------------------------------------------ motion */
-/* Fades only: no sliding/zooming screens, no vertical movement (combing at 1080i). */
-body.broadcast .screen { transform: none !important; transition: opacity var(--fade, 0.4s) ease-in-out; }
-body.broadcast .ticker-content, body.broadcast #interrupt { animation-name: bcFade; }
+/* broadcast.animations: false (body.bc-reduced-motion) calms things for TVs
+   that show artifacts: fades only (no sliding, which can comb at 1080i), and
+   solid energy-flow lines instead of moving dots. By default animations are
+   the same as on a monitor. */
+body.broadcast.bc-reduced-motion .screen { transform: none !important; transition: opacity var(--fade, 0.4s) ease-in-out; }
+body.broadcast.bc-reduced-motion .ticker-content, body.broadcast.bc-reduced-motion #interrupt { animation-name: bcFade; }
 @keyframes bcFade { from { opacity: 0; } to { opacity: 1; } }
-/* Energy flow: solid lines instead of moving dots (small moving detail costs bitrate). */
-body.broadcast .flow path.flow { animation: none; stroke-dasharray: none; stroke-width: 10; }
-body.broadcast .cam.is-live .cam-badge::before, body.broadcast .int-dot { animation: none; }
+body.broadcast.bc-reduced-motion .flow path.flow { animation: none; stroke-dasharray: none; stroke-width: 10; }
+body.broadcast.bc-reduced-motion .cam.is-live .cam-badge::before, body.broadcast.bc-reduced-motion .int-dot { animation: none; }

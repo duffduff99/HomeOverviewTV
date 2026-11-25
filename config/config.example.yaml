@@ -51,11 +51,13 @@ broadcast:
   dither: 0.02                # light noise against gradient banding (0 = off)
   global_lift: 0              # 0-0.2: also lift darks across the whole picture (more GPU)
   red_gain: 1.0               # e.g. 1.03 if whites still look slightly cyan
-  label_size: 24              # minimum small-label size
-  body_size: 33               # minimum body/value text size
+  label_size: 20              # small-label size (0 = same as on a monitor)
+  body_size: 28               # body/value text size (0 = same as on a monitor)
   line_width: 4               # dividers, tracks, progress bars (kept even)
   safe_area: 5                # % margin on each side for TV overscan
-  transition_seconds: 0.4     # crossfade between screens
+  transition_seconds: 1       # crossfade between screens
+  animations: true            # false: fades only and still energy-flow lines, if the TV
+                              # shows blockiness or jagged edges around moving things
   effects: true               # seasonal particles, same as on a monitor
   # If particles ever look blocky or jagged on the TV, try fewer, larger and slower:
   # particle_density: 0.5     #   share of the normal number

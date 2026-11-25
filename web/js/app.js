@@ -126,7 +126,7 @@ function applyTheme(theme) {
 // URL; otherwise display.mode in config.yaml decides.
 const URL_MODE = new URLSearchParams(location.search).get("display");
 function fadeSeconds() {
-  const v = isBroadcast() ? (app.config.broadcast?.transition_seconds ?? 0.4) : (app.config.display?.transition_seconds ?? 1);
+  const v = isBroadcast() ? (app.config.broadcast?.transition_seconds ?? 1) : (app.config.display?.transition_seconds ?? 1);
   return Math.max(0, Number(v) || 0);
 }
 function isBroadcast() {
@@ -151,12 +151,18 @@ function applyBroadcast() {
   if (!on) return;
   const num = (v, d, lo, hi) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
   // Tunable sizes and levels -> CSS custom properties.
-  body.style.setProperty("--bc-label", `${num(bc.label_size, 24, 10, 60)}px`);
-  body.style.setProperty("--bc-body", `${num(bc.body_size, 33, 14, 80)}px`);
+  // Text sizes; 0 means "same as on a monitor" (the bolder weights still apply).
+  const label = num(bc.label_size, 20, 0, 60), bodySize = num(bc.body_size, 28, 0, 80);
+  body.classList.toggle("bc-design-labels", label === 0);
+  body.classList.toggle("bc-design-body", bodySize === 0);
+  if (label) body.style.setProperty("--bc-label", `${label}px`);
+  if (bodySize) body.style.setProperty("--bc-body", `${bodySize}px`);
+  body.classList.toggle("bc-reduced-motion", bc.animations === false);
   const line = Math.round(num(bc.line_width, 4, 2, 12) / 2) * 2;   // keep it even (interlace)
   body.style.setProperty("--bc-line", `${line}px`);
   body.style.setProperty("--bc-border", `${Math.max(2, line / 2)}px`);
   body.style.setProperty("--bc-panel-lift", num(bc.panel_lift, 0.12, 0, 0.5));
+  body.style.setProperty("--bc-panel-mix", `${Math.round(num(bc.panel_lift, 0.12, 0, 0.4) * 250)}%`);
   body.style.setProperty("--bc-inner-lift", Math.min(0.5, num(bc.panel_lift, 0.12, 0, 0.5) * 0.85));
   body.style.setProperty("--bc-dither", num(bc.dither, 0.02, 0, 0.2));
   // Background: lift so nothing is darker than min_dark (hue kept), and desaturate.

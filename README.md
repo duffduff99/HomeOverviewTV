@@ -127,24 +127,17 @@ and themes.
 ### Updating
 
 ```bash
-cd ~/house-tv && git pull
+cd ~/house-tv && ./update.sh
 ```
 
-Then, if `docker-compose.yml` uses the published image:
+It gets the latest code, then downloads the published image or rebuilds from source (whichever
+your `docker-compose.yml` uses), restarts the server, and confirms the new version is actually
+running. Your local edits to `docker-compose.yml` are kept, and `config.yaml`, `.env` and your
+music are never touched. If the kiosk installer changed, it tells you to re-run it with your
+usual options. The TV reloads the new version by itself.
 
-```bash
-sudo docker compose pull && sudo docker compose up -d
-```
-
-or, if you switched it to `build: .`:
-
-```bash
-sudo docker compose up -d --build
-```
-
-The TV reloads the new version by itself once the server restarts. Your `config.yaml`, `.env` and
-music aren't touched by `git pull`. If `git pull` says local changes would be overwritten (usually
-your `docker-compose.yml` edit), run `git stash && git pull && git stash pop`.
+If it says the server is still on an older version right after you merged an update on GitHub,
+the published image is probably still being built: wait a few minutes and run it again.
 
 ## Install on a mini PC (Intel/AMD)
 
@@ -199,15 +192,15 @@ sudo ./kiosk/install-kiosk.sh --broadcast --audio analog --resolution 1920x1080
   (keeping its hue), slightly desaturated and lightly dithered against banding. Panels are a clear
   step lighter than the background, with solid 2px edges. Optional `global_lift` and `red_gain`
   apply to the whole picture.
-- **Text:** at least 24px labels and 33px body text (1080 layout; 16/22px at 720p), no thin
-  weights, white primary text and light-grey secondary text, a subtle dark outline, brighter
+- **Text:** 20px labels and 28px body text by default (1080 layout; `label_size` /
+  `body_size`, 0 = monitor sizes), no thin weights, white primary text and light-grey secondary text, a subtle dark outline, brighter
   small coloured text.
 - **Lines:** no 1px hairlines; dividers, tracks and progress bars are 2-4px, even heights (for
   1080i).
-- **Motion:** crossfades only (no sliding), seasonal particles as on a monitor (if they
-  ever look blocky on the TV, `particle_density`, `particle_size` and `particle_speed` can make them
-  fewer, larger and slower; `effects: false` turns them off), and
-  the energy flow lines are solid instead of animated.
+- **Motion:** the same animations and seasonal particles as on a monitor by default. If the TV
+  shows artifacts around moving things, `animations: false` switches to fades only and still
+  energy-flow lines, and `particle_density`, `particle_size` and `particle_speed` make particles
+  fewer, larger and slower (`effects: false` turns them off).
 - **Safe area:** 5% margins; the layout reflows to fit (e.g. headlines show as many as fit, and
   six air-quality readings become tiles).
 
