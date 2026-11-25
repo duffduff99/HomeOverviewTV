@@ -56,3 +56,43 @@ def test_on_this_day_spread():
             + [{"text": "no year"}]}
     out = parse_on_this_day(data, 3)
     assert [e["year"] for e in out] == [1066, 1914, 1989]
+
+
+def test_get_reads_whole_response_sent_in_pieces():
+    """Regression: large feeds arrive in several chunks; all of them must be read."""
+    import asyncio
+    import json
+
+    import aiohttp
+    from aiohttp import web
+
+    from housetv.news import _get
+
+    payload = json.dumps({"selected": [{"year": 1900 + i, "text": "x" * 500} for i in range(200)]}).encode()
+
+    async def handler(request):
+        resp = web.StreamResponse()
+        await resp.prepare(request)
+        for i in range(0, len(payload), 8192):        # dribble it out in pieces
+            await resp.write(payload[i:i + 8192])
+            await asyncio.sleep(0.01)
+        return resp
+
+    async def run():
+        app = web.Application()
+        app.router.add_get("/big", handler)
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(runner, "127.0.0.1", 0)
+        await site.start()
+        port = site._server.sockets[0].getsockname()[1]
+        try:
+            async with aiohttp.ClientSession() as session:
+                body = await _get(session, f"http://127.0.0.1:{port}/big")
+        finally:
+            await runner.cleanup()
+        return body
+
+    body = asyncio.run(run())
+    assert len(body) == len(payload) > 100_000
+    assert len(json.loads(body)["selected"]) == 200

@@ -138,10 +138,14 @@ async def _get(session: aiohttp.ClientSession, url: str) -> bytes:
     async with session.get(url, headers={"User-Agent": USER_AGENT},
                            timeout=aiohttp.ClientTimeout(total=20)) as resp:
         resp.raise_for_status()
-        body = await resp.content.read(MAX_BYTES + 1)
-        if len(body) > MAX_BYTES:
-            raise ValueError("response too large")
-        return body
+        # Read to the end: responses arrive in pieces, and content.read(n) only
+        # returns what has arrived so far. Stop if it grows past MAX_BYTES.
+        body = bytearray()
+        async for chunk in resp.content.iter_chunked(64 * 1024):
+            body += chunk
+            if len(body) > MAX_BYTES:
+                raise ValueError("response too large")
+        return bytes(body)
 
 
 async def fetch_headlines(session: aiohttp.ClientSession, feeds: list[dict], limit: int,
