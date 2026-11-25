@@ -75,7 +75,8 @@
     const bc = cfg.broadcast || {};
     const m = Math.round(Number(bc.min_dark ?? 45));
     const lift = Number(bc.panel_lift ?? 0.12);
-    const card = Math.round(m + lift * (255 - m));
+    // Panels are the theme's dark panel colour (about 30) mixed with white.
+    const card = Math.round(30 + Math.min(1, lift * 2.5) * (255 - 30));
     document.documentElement.style.setProperty("--l", `${bc.label_size ?? 24}px`);
     document.documentElement.style.setProperty("--b", `${bc.body_size ?? 33}px`);
     const sample = (bgv, name) => `<div style="background:${g(bgv)}">

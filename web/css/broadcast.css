@@ -12,7 +12,8 @@ body.broadcast {
   --bc-body: 33px;             /* body text and values: min 22px / 33px */
   --bc-line: 4px;              /* dividers, tracks, progress bars: even, >= 2px */
   --bc-border: 2px;            /* panel edges */
-  --bc-panel-lift: 0.12;       /* panel = background + this much white */
+  --bc-panel-lift: 0.12;       /* how much lighter panels are (see --bc-panel-mix) */
+  --bc-panel-mix: 30%;         /* panel = theme's panel colour mixed with this much white */
   --bc-inner-lift: 0.10;       /* tiles inside panels, one more step up */
 
   --text: #ffffff;
@@ -40,9 +41,11 @@ body.broadcast #bg::before {
 }
 
 /* ------------------------------------------------------------ panels */
-/* Panels: a clear step lighter than the background, solid 2px edge, no blur. */
+/* Panels: solid (so the background and its particles stay behind them, and
+   text sits on a calm surface that encodes cleanly), a clear step lighter than
+   the background in the theme's own hue, with a solid 2px edge and no blur. */
 body.broadcast .panel, body.broadcast .stat, body.broadcast #lower {
-  background: rgba(255, 255, 255, var(--bc-panel-lift));
+  background: color-mix(in srgb, var(--panel-solid), #ffffff var(--bc-panel-mix));
   border: var(--bc-border) solid var(--panel-border);
   backdrop-filter: none; -webkit-backdrop-filter: none;
   box-shadow: none;

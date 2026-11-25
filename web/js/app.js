@@ -157,6 +157,7 @@ function applyBroadcast() {
   body.style.setProperty("--bc-line", `${line}px`);
   body.style.setProperty("--bc-border", `${Math.max(2, line / 2)}px`);
   body.style.setProperty("--bc-panel-lift", num(bc.panel_lift, 0.12, 0, 0.5));
+  body.style.setProperty("--bc-panel-mix", `${Math.round(num(bc.panel_lift, 0.12, 0, 0.4) * 250)}%`);
   body.style.setProperty("--bc-inner-lift", Math.min(0.5, num(bc.panel_lift, 0.12, 0, 0.5) * 0.85));
   body.style.setProperty("--bc-dither", num(bc.dither, 0.02, 0, 0.2));
   // Background: lift so nothing is darker than min_dark (hue kept), and desaturate.
