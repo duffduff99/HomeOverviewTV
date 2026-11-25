@@ -192,15 +192,15 @@ sudo ./kiosk/install-kiosk.sh --broadcast --audio analog --resolution 1920x1080
   (keeping its hue), slightly desaturated and lightly dithered against banding. Panels are a clear
   step lighter than the background, with solid 2px edges. Optional `global_lift` and `red_gain`
   apply to the whole picture.
-- **Text:** at least 24px labels and 33px body text (1080 layout; 16/22px at 720p), no thin
-  weights, white primary text and light-grey secondary text, a subtle dark outline, brighter
+- **Text:** 20px labels and 28px body text by default (1080 layout; `label_size` /
+  `body_size`, 0 = monitor sizes), no thin weights, white primary text and light-grey secondary text, a subtle dark outline, brighter
   small coloured text.
 - **Lines:** no 1px hairlines; dividers, tracks and progress bars are 2-4px, even heights (for
   1080i).
-- **Motion:** crossfades only (no sliding), seasonal particles as on a monitor (if they
-  ever look blocky on the TV, `particle_density`, `particle_size` and `particle_speed` can make them
-  fewer, larger and slower; `effects: false` turns them off), and
-  the energy flow lines are solid instead of animated.
+- **Motion:** the same animations and seasonal particles as on a monitor by default. If the TV
+  shows artifacts around moving things, `animations: false` switches to fades only and still
+  energy-flow lines, and `particle_density`, `particle_size` and `particle_speed` make particles
+  fewer, larger and slower (`effects: false` turns them off).
 - **Safe area:** 5% margins; the layout reflows to fit (e.g. headlines show as many as fit, and
   six air-quality readings become tiles).
 

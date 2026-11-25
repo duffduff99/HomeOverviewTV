@@ -138,7 +138,8 @@ body.high-contrast .chart .grid { stroke: rgba(255, 255, 255, 0.16); }
 .clock { text-align: right; }
 .clock-line { font-size: 52px; font-weight: 650; line-height: 1; letter-spacing: -0.02em; }
 #clock-period { font-size: 22px; font-weight: 650; margin-left: 6px; color: var(--text-2); text-transform: uppercase; }
-#clock-date { font-size: 19px; color: var(--text-2); margin-top: 6px; font-weight: 500; }
+#clock-date { font-size: 19px; color: var(--text-2); margin-top: 6px; font-weight: 500; white-space: nowrap; }
+.clock { flex: none; }
 
 /* --------------------------------------------------------------- screens */
 #screens { position: relative; flex: 1; min-height: 0; }

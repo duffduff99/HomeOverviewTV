@@ -133,6 +133,7 @@ def test_merge_twice_daily():
 def test_broadcast_defaults_and_overrides():
     cfg = normalise({"broadcast": {"min_dark": 52}})
     assert cfg["display"]["mode"] == "monitor"
-    assert cfg["broadcast"]["min_dark"] == 52 and cfg["broadcast"]["body_size"] == 33
+    assert cfg["broadcast"]["min_dark"] == 52 and cfg["broadcast"]["body_size"] == 28
+    assert cfg["broadcast"]["animations"] is True
     assert cfg["broadcast"]["effects"] is True and cfg["broadcast"]["particle_density"] == 1.0
     assert cfg["broadcast"]["safe_area"] == 5

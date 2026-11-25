@@ -50,11 +50,12 @@ DEFAULTS: dict[str, Any] = {
         "dither": 0.02,          # light noise over the background against banding (0 = off)
         "global_lift": 0.0,      # 0-0.2: also lift the darks of the whole picture (costs GPU)
         "red_gain": 1.0,         # e.g. 1.03 if whites still look slightly cyan
-        "label_size": 24,        # min small-label size
-        "body_size": 33,         # min body/value text size
+        "label_size": 20,        # small-label size (0 = same as on a monitor)
+        "body_size": 28,         # body/value text size (0 = same as on a monitor)
         "line_width": 4,         # dividers, tracks, progress bars (keep even)
         "safe_area": 5,          # % margin on each side (TV overscan)
-        "transition_seconds": 0.4,
+        "transition_seconds": 1,
+        "animations": True,      # False: fades only and still energy-flow lines (calmer for the encoder)
         "effects": True,         # seasonal particles, same as on a monitor by default;
         "particle_density": 1.0, #   multipliers if they ever need taming on the TV
         "particle_size": 1.0,    #   (e.g. 0.5 density, 1.6 size, 0.5 speed)
