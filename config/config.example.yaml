@@ -47,6 +47,8 @@ rotation:
 broadcast:
   min_dark: 45                # 0-255: background darks are lifted to at least this
   panel_lift: 0.12            # how much lighter panels are than the background
+  panel_opacity: 0.72         # 1 = solid panels; lower lets the background show through
+  panel_blur: 16              # blur behind see-through panels (0 = none)
   background_saturation: 0.85 # tone down large saturated background areas
   dither: 0.02                # light noise against gradient banding (0 = off)
   global_lift: 0              # 0-0.2: also lift darks across the whole picture (more GPU)

@@ -45,7 +45,9 @@ DEFAULTS: dict[str, Any] = {
     # (1920x1080 layout; at 720p everything is 2/3 of this).
     "broadcast": {
         "min_dark": 45,          # 0-255: darkest level the background is lifted to (crush level)
-        "panel_lift": 0.12,      # how much lighter panels are than the background (0-1)
+        "panel_lift": 0.12,      # how much lighter panels are than the background (0-0.4)
+        "panel_opacity": 0.72,   # 1 = solid panels; lower lets the background show through
+        "panel_blur": 16,        # px of blur behind see-through panels (0 = none)
         "background_saturation": 0.85,  # tone down big saturated background areas
         "dither": 0.02,          # light noise over the background against banding (0 = off)
         "global_lift": 0.0,      # 0-0.2: also lift the darks of the whole picture (costs GPU)

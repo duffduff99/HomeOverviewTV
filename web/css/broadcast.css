@@ -12,8 +12,11 @@ body.broadcast {
   --bc-body: 28px;             /* body text and values (broadcast.body_size) */
   --bc-line: 4px;              /* dividers, tracks, progress bars: even, >= 2px */
   --bc-border: 2px;            /* panel edges */
-  --bc-panel-lift: 0.12;       /* how much lighter panels are (see --bc-panel-mix) */
-  --bc-panel-mix: 30%;         /* panel = theme's panel colour mixed with this much white */
+  --bc-panel-lift: 0.12;       /* how much lighter panels are (broadcast.panel_lift) */
+  --bc-panel-mix: 30%;         /* fallback: theme's panel colour mixed with this much white */
+  --bc-panel-l: 0.29;          /* OKLCH lightness added to the theme's panel colour */
+  --bc-panel-alpha: 0.72;      /* panel opacity (broadcast.panel_opacity) */
+  --bc-panel-blur: 16px;       /* blur behind panels (broadcast.panel_blur) */
   --bc-inner-lift: 0.10;       /* tiles inside panels, one more step up */
 
   --text: #ffffff;
@@ -41,13 +44,16 @@ body.broadcast #bg::before {
 }
 
 /* ------------------------------------------------------------ panels */
-/* Panels: solid (so the background and its particles stay behind them, and
-   text sits on a calm surface that encodes cleanly), a clear step lighter than
-   the background in the theme's own hue, with a solid 2px edge and no blur. */
+/* Panels: the theme's panel colour made lighter *in its own hue* (OKLCH keeps
+   the colour instead of greying it like mixing with white would), partly
+   see-through with a soft blur behind, so the background and its particles
+   read as soft shapes behind the content. Solid 2px edge for a clear outline. */
 body.broadcast .panel, body.broadcast .stat, body.broadcast #lower {
-  background: color-mix(in srgb, var(--panel-solid), #ffffff var(--bc-panel-mix));
+  background: color-mix(in srgb, var(--panel-solid), #ffffff var(--bc-panel-mix));   /* fallback */
+  background: oklch(from var(--panel-solid) calc(l + var(--bc-panel-l)) calc(c * 1.5) h / var(--bc-panel-alpha));
   border: var(--bc-border) solid var(--panel-border);
-  backdrop-filter: none; -webkit-backdrop-filter: none;
+  backdrop-filter: blur(var(--bc-panel-blur)) saturate(130%);
+  -webkit-backdrop-filter: blur(var(--bc-panel-blur)) saturate(130%);
   box-shadow: none;
 }
 body.broadcast .pill { border-width: var(--bc-border); background: rgba(255, 255, 255, 0.12); }
@@ -56,7 +62,8 @@ body.broadcast .cam { border-width: var(--bc-border); }
 /* Elements that use the theme's darkest colour (flow circles, small chips)
    would crush to black: mix in a neutral grey to lift them above min_dark. */
 body.broadcast :is(.node, .node-sub, .hvac-mode:not([data-mode="heat"]):not([data-mode="cool"])) {
-  background: color-mix(in srgb, var(--panel-solid) 65%, #a0a6b4 35%);
+  background: color-mix(in srgb, var(--panel-solid) 65%, #a0a6b4 35%);   /* fallback */
+  background: oklch(from var(--panel-solid) calc(l + var(--bc-panel-l) + 0.04) calc(c * 1.5) h);
 }
 
 /* Dividers: no hairlines (they twitter at 1080i). */
