@@ -127,24 +127,17 @@ and themes.
 ### Updating
 
 ```bash
-cd ~/house-tv && git pull
+cd ~/house-tv && ./update.sh
 ```
 
-Then, if `docker-compose.yml` uses the published image:
+It gets the latest code, then downloads the published image or rebuilds from source (whichever
+your `docker-compose.yml` uses), restarts the server, and confirms the new version is actually
+running. Your local edits to `docker-compose.yml` are kept, and `config.yaml`, `.env` and your
+music are never touched. If the kiosk installer changed, it tells you to re-run it with your
+usual options. The TV reloads the new version by itself.
 
-```bash
-sudo docker compose pull && sudo docker compose up -d
-```
-
-or, if you switched it to `build: .`:
-
-```bash
-sudo docker compose up -d --build
-```
-
-The TV reloads the new version by itself once the server restarts. Your `config.yaml`, `.env` and
-music aren't touched by `git pull`. If `git pull` says local changes would be overwritten (usually
-your `docker-compose.yml` edit), run `git stash && git pull && git stash pop`.
+If it says the server is still on an older version right after you merged an update on GitHub,
+the published image is probably still being built: wait a few minutes and run it again.
 
 ## Install on a mini PC (Intel/AMD)
 

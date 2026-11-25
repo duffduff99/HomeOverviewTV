@@ -1,6 +1,10 @@
 FROM python:3.13-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
+# The git commit this image was built from (shown at /health; update.sh checks it).
+ARG GIT_SHA=unknown
+
+ENV HOUSE_TV_REVISION=$GIT_SHA \
+    PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     CONFIG_DIR=/config \
     MUSIC_DIR=/music \

@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 from pathlib import Path
 
 import aiohttp
 from aiohttp import web
 
+from . import __version__
 from .hub import Hub
 
 log = logging.getLogger(__name__)
@@ -51,7 +53,8 @@ def build_app(hub: Hub, web_dir: Path, music_dir: Path, session: aiohttp.ClientS
     @routes.get("/health")
     async def health(_req: web.Request) -> web.Response:
         return web.json_response({"ok": True, "connected": hub.source.ready,
-                                  "displays": len(hub.clients)})
+                                  "displays": len(hub.clients), "version": __version__,
+                                  "revision": os.environ.get("HOUSE_TV_REVISION", "unknown")})
 
     @routes.get("/ws")
     async def ws_handler(req: web.Request) -> web.WebSocketResponse:
