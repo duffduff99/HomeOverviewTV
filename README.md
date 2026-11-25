@@ -189,9 +189,10 @@ sudo ./kiosk/install-kiosk.sh --broadcast --audio analog --resolution 1920x1080
 (Or open `http://<server>:8080/?display=broadcast` in any browser to preview it.) What it changes:
 
 - **Levels:** the background is lifted so nothing in it is darker than `broadcast.min_dark`
-  (keeping its hue), slightly desaturated and lightly dithered against banding. Panels are a clear
-  step lighter than the background, with solid 2px edges. Optional `global_lift` and `red_gain`
-  apply to the whole picture.
+  (keeping its hue), slightly desaturated and lightly dithered against banding. Panels are a lighter
+  shade of the theme's own colour (a clear step above the background), partly see-through with a
+  soft blur behind, and solid 2px edges: `panel_lift` (how much lighter), `panel_opacity` (1 =
+  solid) and `panel_blur`. Optional `global_lift` and `red_gain` apply to the whole picture.
 - **Text:** 20px labels and 28px body text by default (1080 layout; `label_size` /
   `body_size`, 0 = monitor sizes), no thin weights, white primary text and light-grey secondary text, a subtle dark outline, brighter
   small coloured text.
